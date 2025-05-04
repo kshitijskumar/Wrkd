@@ -1,0 +1,13 @@
+import org.example.project.wrkd.core.models.app.ExerciseResistanceMethod;
+
+CREATE TABLE Set_table(
+    id TEXT NOT NULL PRIMARY KEY,
+    repsCount INTEGER NOT NULL,
+    resistanceMethod TEXT AS ExerciseResistanceMethod NOT NULL,
+    additionalWeight INTEGER NOT NULL,
+    exerciseId TEXT NOT NULL,
+    FOREIGN KEY (exerciseId) REFERENCES Exercise_table(id)
+);
+
+upsertSet:
+INSERT OR REPLACE INTO Set_table VALUES ?;

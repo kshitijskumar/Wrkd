@@ -1,0 +1,95 @@
+package org.example.project.wrkd.di
+
+import org.example.project.wrkd.addworkout.WorkoutRoutinePlanner
+import org.example.project.wrkd.addworkout.ui.DayPlanViewModel
+import org.example.project.wrkd.core.db.AppDB
+import org.example.project.wrkd.core.db.dao.WorkoutDaoImpl
+import org.example.project.wrkd.core.local.UserDataLocalDataSource
+import org.example.project.wrkd.core.local.UserDataLocalDataSourceImpl
+import org.example.project.wrkd.core.repo.UserDataRepository
+import org.example.project.wrkd.core.repo.UserDataRepositoryImpl
+import org.example.project.wrkd.core.utils.CoroutinesContextProvider
+import org.example.project.wrkd.core.utils.CoroutinesContextProviderImpl
+import org.example.project.wrkd.di.core.Module
+import org.example.project.wrkd.di.core.createModule
+import org.example.project.wrkd.di.core.factory
+import org.example.project.wrkd.di.core.inject
+import org.example.project.wrkd.di.core.single
+import org.example.project.wrkd.track.WorkoutTrackManager
+import org.example.project.wrkd.track.WorkoutTrackerManagerImpl
+import org.example.project.wrkd.track.data.dao.WorkoutDao
+import org.example.project.wrkd.track.data.local.WorkoutLocalDataSource
+import org.example.project.wrkd.track.data.local.WorkoutLocalDataSourceImpl
+import org.example.project.wrkd.track.data.repo.WorkoutRepository
+import org.example.project.wrkd.track.data.repo.WorkoutRepositoryImpl
+import org.example.project.wrkd.track.domain.SaveWorkoutUseCase
+import org.example.project.wrkd.track.ui.WorkoutTrackerViewModel
+import org.example.project.wrkd.utils.TimeUtils
+import org.example.project.wrkd.utils.TimeUtilsImpl
+
+fun appModule(): Module {
+    return createModule {
+        factory<UserDataLocalDataSource> {
+            UserDataLocalDataSourceImpl()
+        }
+
+        factory<UserDataRepository> {
+            UserDataRepositoryImpl()
+        }
+
+        factory {
+            WorkoutRoutinePlanner()
+        }
+
+        factory {
+            DayPlanViewModel(
+                args = inject(),
+                workoutRoutinePlanner = inject()
+            )
+        }
+
+        factory<TimeUtils> {
+            TimeUtilsImpl()
+        }
+
+        factory {
+            WorkoutTrackerViewModel(
+                timeUtils = inject(),
+                workoutTrackManager = inject(),
+                saveWorkoutUseCase = inject()
+            )
+        }
+
+        factory<WorkoutTrackManager> {
+            WorkoutTrackerManagerImpl()
+        }
+
+        factory<WorkoutDao> {
+            inject<AppDB>().workoutDao
+        }
+
+        factory<WorkoutLocalDataSource> {
+            WorkoutLocalDataSourceImpl(dao = inject())
+        }
+
+        factory<WorkoutRepository> {
+            WorkoutRepositoryImpl(
+                localDataSource = inject()
+            )
+        }
+
+        factory {
+            SaveWorkoutUseCase(repository = inject())
+        }
+
+        single<CoroutinesContextProvider> {
+            CoroutinesContextProviderImpl()
+        }
+    }
+}
+
+expect fun platformModule(): Module
+
+class Test1(val a: Int)
+
+class Test2(val a: Int)

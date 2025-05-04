@@ -1,0 +1,33 @@
+import org.example.project.wrkd.core.models.WeekDay;
+
+CREATE TABLE Workout_day_table(
+    id TEXT NOT NULL PRIMARY KEY,
+    day TEXT AS WeekDay NOT NULL,
+    dayName TEXT NOT NULL,
+    startedAt INTEGER NOT NULL,
+    workoutDuration INTEGER NOT NULL
+);
+
+getWorkoutDetails:
+SELECT
+    wd.id AS workoutId,
+    wd.day,
+    wd.dayName,
+    wd.startedAt,
+    wd.workoutDuration,
+
+    ed.id AS exerciseId,
+    ed.name AS exerciseName,
+
+    sd.id AS setId,
+    sd.repsCount,
+    sd.resistanceMethod,
+    sd.additionalWeight
+
+FROM Workout_day_table wd
+LEFT JOIN Exercise_table ed ON ed.workoutId = wd.id
+LEFT JOIN Set_table sd ON ed.id = sd.exerciseId
+WHERE wd.id = ?;
+
+upsertWorkoutDetails:
+INSERT OR REPLACE INTO Workout_day_table VALUES ?;
