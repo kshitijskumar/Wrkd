@@ -6,6 +6,9 @@ import org.example.project.wrkd.core.db.AppDB
 import org.example.project.wrkd.core.db.dao.WorkoutDaoImpl
 import org.example.project.wrkd.core.local.UserDataLocalDataSource
 import org.example.project.wrkd.core.local.UserDataLocalDataSourceImpl
+import org.example.project.wrkd.core.navigation.AppNavigator
+import org.example.project.wrkd.core.navigation.AppNavigatorImpl
+import org.example.project.wrkd.core.navigation.AppNavigatorManager
 import org.example.project.wrkd.core.repo.UserDataRepository
 import org.example.project.wrkd.core.repo.UserDataRepositoryImpl
 import org.example.project.wrkd.core.utils.CoroutinesContextProvider
@@ -15,6 +18,8 @@ import org.example.project.wrkd.di.core.createModule
 import org.example.project.wrkd.di.core.factory
 import org.example.project.wrkd.di.core.inject
 import org.example.project.wrkd.di.core.single
+import org.example.project.wrkd.home.domain.GetAllWorkoutBetweenGivenTimestampUseCase
+import org.example.project.wrkd.home.ui.HomeViewModel
 import org.example.project.wrkd.track.WorkoutTrackManager
 import org.example.project.wrkd.track.WorkoutTrackerManagerImpl
 import org.example.project.wrkd.track.data.dao.WorkoutDao
@@ -33,7 +38,11 @@ fun appModule(): Module {
             UserDataLocalDataSourceImpl()
         }
 
-        factory<UserDataRepository> {
+        factory(
+            block = {
+                bind(UserDataRepository::class)
+            }
+        ) {
             UserDataRepositoryImpl()
         }
 
@@ -72,7 +81,11 @@ fun appModule(): Module {
             WorkoutLocalDataSourceImpl(dao = inject())
         }
 
-        factory<WorkoutRepository> {
+        factory(
+            block = {
+                bind(WorkoutRepository::class)
+            }
+        ) {
             WorkoutRepositoryImpl(
                 localDataSource = inject()
             )
@@ -85,6 +98,34 @@ fun appModule(): Module {
         single<CoroutinesContextProvider> {
             CoroutinesContextProviderImpl()
         }
+
+        single(
+            block = {
+                bind(
+                    AppNavigator::class,
+                    AppNavigatorManager::class
+                )
+            }
+        ) {
+            AppNavigatorImpl()
+        }
+
+        home()
+    }
+}
+
+private fun Module.Builder.home() {
+    factory {
+        GetAllWorkoutBetweenGivenTimestampUseCase(
+            repository = inject()
+        )
+    }
+
+    factory {
+        HomeViewModel(
+            getAllWorkoutBetweenGivenTimestampUseCase = inject(),
+            appNavigator = inject()
+        )
     }
 }
 

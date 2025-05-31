@@ -1,5 +1,6 @@
 package org.example.project.wrkd.di.core
 
+import org.example.project.wrkd.core.utils.CoroutinesContextProviderImpl
 import org.example.project.wrkd.di.Test2
 import kotlin.contracts.contract
 import kotlin.reflect.KClass
@@ -20,6 +21,7 @@ object Injector {
         }
 
         definitions = defs
+        println("InjecStuff: definitions: $definitions")
     }
 
     fun <T: Any>inject(
@@ -64,26 +66,50 @@ class Module internal constructor(
         fun <T: Any>factory(
             name: String? = null,
             klass: KClass<T>,
-            create: CREATOR<T>
+            block: InjectionEntry.() -> Unit = {},
+            create: CREATOR<T>,
         ) {
             val definition = CreationDefinition.Factory(create = create)
             val key = klass.simpleName + (name ?: "")
 
+            val injectionEntry = InjectionEntry { bindClasses ->
+                bindClasses.forEach {
+                    val keyForBinding = it.simpleName + (name ?: "")
+                    _definitions[keyForBinding] = definition
+                }
+            }
+            injectionEntry.block()
             _definitions[key] = definition
         }
 
         fun <T : Any>single(
             name: String? = null,
             klass: KClass<T>,
+            block: InjectionEntry.() -> Unit = {},
             create: CREATOR<T>
         ) {
             val definition = CreationDefinition.Single(create = create)
             val key = klass.simpleName + (name ?: "")
 
+            val injectionEntry = InjectionEntry { bindClasses ->
+                bindClasses.forEach {
+                    val keyForBinding = it.simpleName + (name ?: "")
+                    _definitions[keyForBinding] = definition
+                }
+            }
+            injectionEntry.block()
             _definitions[key] = definition
         }
     }
 
+}
+
+data class InjectionEntry(
+    private val bind: (List<KClass<*>>) -> Unit
+) {
+    fun bind(vararg classes: KClass<*>) {
+        bind.invoke(classes.toList())
+    }
 }
 
 fun createModule(
@@ -96,23 +122,27 @@ fun createModule(
 
 inline fun <reified T: Any> Module.Builder.factory(
     name: String? = null,
-    noinline create: CREATOR<T>
+    noinline block: InjectionEntry.() -> Unit = {},
+    noinline create: CREATOR<T>,
 ) {
     this.factory(
         name = name,
         klass = T::class,
-        create = create
+        create = create,
+        block = block
     )
 }
 
 inline fun <reified T: Any> Module.Builder.single(
     name: String? = null,
+    noinline block: InjectionEntry.() -> Unit = {},
     noinline create: CREATOR<T>
 ) {
     this.single(
         name = name,
         klass = T::class,
-        create = create
+        create = create,
+        block = block
     )
 }
 

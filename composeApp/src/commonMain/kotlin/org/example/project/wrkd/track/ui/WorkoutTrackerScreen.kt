@@ -55,6 +55,7 @@ import org.example.project.wrkd.core.models.app.ExerciseSetInfoAppModel
 import org.example.project.wrkd.core.models.app.WeightInGrams
 import org.example.project.wrkd.core.models.app.displayString
 import org.example.project.wrkd.core.models.app.resistanceMethodName
+import org.example.project.wrkd.core.navigation.scenes.AppScenes
 import org.example.project.wrkd.core.ui.compose.AppButton
 import org.example.project.wrkd.core.ui.compose.AppSecondaryButton
 import org.example.project.wrkd.core.ui.compose.AppTextField
@@ -64,6 +65,7 @@ import org.example.project.wrkd.core.ui.compose.AppTextFieldWithTrailingContent
 import org.example.project.wrkd.core.ui.compose.AppTheme
 import org.example.project.wrkd.core.ui.compose.AppTimerButton
 import org.example.project.wrkd.core.ui.compose.ConfirmationDialog
+import org.example.project.wrkd.di.core.inject
 import org.example.project.wrkd.utils.TimeFormattingStringUtils
 import org.jetbrains.compose.resources.painterResource
 import wrkd.composeapp.generated.resources.Res

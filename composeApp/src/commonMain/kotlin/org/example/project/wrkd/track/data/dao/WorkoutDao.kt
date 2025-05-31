@@ -9,4 +9,9 @@ interface WorkoutDao {
 
     suspend fun insertWorkoutDetails(workoutDetails: DayPlanEntity)
 
+    fun getWorkoutBetweenTimestamps(
+        lowerLimit: Long,
+        upperLimit: Long
+    ): Flow<List<DayPlanEntity>>
+
 }

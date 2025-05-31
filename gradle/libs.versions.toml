@@ -44,7 +44,6 @@ native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "s
 sqldelight = { module = "app.cash.sqldelight:runtime", version.ref = "sqlDelight" }
 sqldelight-coroutines-exts = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqlDelight" }
 
-
 coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 date-time = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "dateTime" }
 

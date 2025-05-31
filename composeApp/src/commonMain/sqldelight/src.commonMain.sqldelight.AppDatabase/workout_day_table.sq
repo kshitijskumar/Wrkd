@@ -31,3 +31,25 @@ WHERE wd.id = ?;
 
 upsertWorkoutDetails:
 INSERT OR REPLACE INTO Workout_day_table VALUES ?;
+
+getWorkoutsBetweenTimestamps:
+SELECT
+    wd.id AS workoutId,
+    wd.day,
+    wd.dayName,
+    wd.startedAt,
+    wd.workoutDuration,
+
+    ed.id AS exerciseId,
+    ed.name AS exerciseName,
+
+    sd.id AS setId,
+    sd.repsCount,
+    sd.resistanceMethod,
+    sd.additionalWeight
+
+FROM Workout_day_table wd
+LEFT JOIN Exercise_table ed ON ed.workoutId = wd.id
+LEFT JOIN Set_table sd ON ed.id = sd.exerciseId
+WHERE wd.startedAt >= ? AND wd.startedAt <= ?
+ORDER BY wd.startedAt DESC;
