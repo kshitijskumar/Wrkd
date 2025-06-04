@@ -19,6 +19,7 @@ import org.example.project.wrkd.di.core.factory
 import org.example.project.wrkd.di.core.inject
 import org.example.project.wrkd.di.core.single
 import org.example.project.wrkd.home.domain.GetAllWorkoutBetweenGivenTimestampUseCase
+import org.example.project.wrkd.home.domain.GetWeeklyWorkoutSummaryUseCase
 import org.example.project.wrkd.home.ui.HomeViewModel
 import org.example.project.wrkd.track.WorkoutTrackManager
 import org.example.project.wrkd.track.WorkoutTrackerManagerImpl
@@ -122,9 +123,18 @@ private fun Module.Builder.home() {
     }
 
     factory {
+        GetWeeklyWorkoutSummaryUseCase(
+            timeUtils = inject(),
+            getAllWorkoutBetweenGivenTimestampUseCase = org.example.project.wrkd.di.core.inject()
+        )
+    }
+
+    factory {
         HomeViewModel(
             getAllWorkoutBetweenGivenTimestampUseCase = inject(),
-            appNavigator = inject()
+            getWeeklyWorkoutSummaryUseCase = inject(),
+            appNavigator = inject(),
+            timeUtils = inject()
         )
     }
 }

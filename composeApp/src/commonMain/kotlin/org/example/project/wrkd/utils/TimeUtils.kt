@@ -11,7 +11,10 @@ import kotlinx.datetime.toInstant
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.format.MonthNames
+import kotlinx.datetime.format.char
 import org.example.project.wrkd.core.models.WeekDay
+import org.example.project.wrkd.utils.TimeFormattingStringUtils.convertToMin2Digs
 
 interface TimeUtils {
 
@@ -20,6 +23,18 @@ interface TimeUtils {
     fun getHourOfDay(time: Long): Int
 
     fun getWeekStartAndEndForTime(time: Long): Pair<Long, Long>
+
+    fun getDayTimeRange(hour: Int): DayTimeRange?
+
+    /**
+     * formats in hh h  mm mins
+     */
+    fun durationMillisToHourMinute(durationMillis: Long): String
+
+    /**
+     * @return formatted in dd MMM
+     */
+    fun getDateMonth(millis: Long): String
 
 }
 
@@ -80,8 +95,78 @@ class TimeUtilsImpl : TimeUtils {
         return Pair(weekStart, weekEnd)
     }
 
+    override fun getDayTimeRange(hour: Int): DayTimeRange? {
+        DayTimeRange.entries.forEach {
+            if (hour in it.range) {
+                return it
+            }
+        }
+        return null
+    }
+
+    override fun durationMillisToHourMinute(durationMillis: Long): String {
+        val hours = durationMillis / TimeFormattingStringUtils.MILLIS_IN_ONE_HOUR
+        var remainingTime = durationMillis % TimeFormattingStringUtils.MILLIS_IN_ONE_HOUR
+
+        val minutes = remainingTime / TimeFormattingStringUtils.MILLIS_IN_ONE_MIN
+
+        val hoursFormatted: (shouldMake2Digits: Boolean) -> String = { shouldMake2Digits ->
+            val hourString = if (hours <= 9 && shouldMake2Digits) {
+                hours.toString().convertToMin2Digs()
+            } else {
+                hours.toString()
+            }
+            "$hourString h"
+        }
+
+        val minutesFormatted: (shouldMake2Digits: Boolean) -> String = { shouldMake2Digits ->
+            val minutesString = if (minutes <= 9 && shouldMake2Digits) {
+                minutes.toString().convertToMin2Digs()
+            } else {
+                minutes.toString()
+            }
+            "$minutesString min"
+        }
+
+        return when {
+            hours > 0 && minutes > 0 -> {
+                "${hoursFormatted(false)} ${minutesFormatted(false)}"
+            }
+            hours > 0 -> {
+                hoursFormatted(false)
+            }
+            minutes > 0 -> {
+                minutesFormatted(false)
+            }
+            else -> {
+                "0 min"
+            }
+        }
+    }
+
+    override fun getDateMonth(millis: Long): String {
+        val dateTime = Instant
+            .fromEpochMilliseconds(millis)
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+
+        val dateFormat = LocalDate.Format {
+            dayOfMonth()
+            char(' ')
+            monthName(MonthNames.ENGLISH_ABBREVIATED)
+        }
+
+        return dateFormat.format(dateTime.date)
+    }
+
     private fun Long.getDateTime(): LocalDateTime {
         val instant = Instant.fromEpochMilliseconds(this)
         return instant.toLocalDateTime(TimeZone.currentSystemDefault())
     }
+}
+
+enum class DayTimeRange(val range: IntRange) {
+    MORNING(0 until 12),
+    AFTERNOON(12 until 16),
+    EVENING(16 until 20),
+    NIGHT(20 .. 23)
 }

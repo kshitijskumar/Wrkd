@@ -12,6 +12,7 @@ import org.example.project.wrkd.core.models.dayName
 import org.example.project.wrkd.core.ui.BaseViewModel
 import org.example.project.wrkd.track.WorkoutTrackManager
 import org.example.project.wrkd.track.domain.SaveWorkoutUseCase
+import org.example.project.wrkd.utils.DayTimeRange
 import org.example.project.wrkd.utils.System
 import org.example.project.wrkd.utils.TimeUtils
 
@@ -221,12 +222,13 @@ class WorkoutTrackerViewModel(
         val dayName = weekDay.dayName
         val hour = timeUtils.getHourOfDay(startTime)
 
-        val timeOfTheDay = when (hour) {
-            in WORKOUT_MORNING_RANGE -> "Morning"
-            in WORKOUT_AFTERNOON_RANGE -> "Afternoon"
-            in WORKOUT_EVENING_RANGE -> "Evening"
-            in WORKOUT_NIGHT_RANGE -> "Night"
-            else -> ""
+
+        val timeOfTheDay = when (timeUtils.getDayTimeRange(hour)) {
+            DayTimeRange.MORNING -> "Morning"
+            DayTimeRange.AFTERNOON -> "Afternoon"
+            DayTimeRange.EVENING -> "Evening"
+            DayTimeRange.NIGHT -> "Night"
+            null -> ""
         }
 
         return if (timeOfTheDay.isNotBlank()) {
@@ -261,9 +263,5 @@ class WorkoutTrackerViewModel(
 
     companion object {
         const val MAX_EMPTY_EXERCISES_ALLOWED = 2
-        private val WORKOUT_MORNING_RANGE = (0 until 12)
-        private val WORKOUT_AFTERNOON_RANGE = (12 until 16)
-        private val WORKOUT_EVENING_RANGE = (16 until 20)
-        private val WORKOUT_NIGHT_RANGE = (20 .. 23)
     }
 }

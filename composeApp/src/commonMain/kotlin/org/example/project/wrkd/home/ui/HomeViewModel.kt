@@ -5,18 +5,27 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.example.project.wrkd.core.models.app.DayPlanAppModel
+import org.example.project.wrkd.core.models.dayName
 import org.example.project.wrkd.core.navigation.AppNavigator
 import org.example.project.wrkd.core.navigation.args.SceneArgs
 import org.example.project.wrkd.core.navigation.args.WorkoutTrackingArgs
 import org.example.project.wrkd.core.navigation.scenes.AppScenes
 import org.example.project.wrkd.core.ui.BaseViewModel
 import org.example.project.wrkd.home.domain.GetAllWorkoutBetweenGivenTimestampUseCase
+import org.example.project.wrkd.home.domain.GetWeeklyWorkoutSummaryUseCase
+import org.example.project.wrkd.utils.DayTimeRange
 import org.example.project.wrkd.utils.System
+import org.example.project.wrkd.utils.TimeUtils
 
 class HomeViewModel(
     private val getAllWorkoutBetweenGivenTimestampUseCase: GetAllWorkoutBetweenGivenTimestampUseCase,
-    private val appNavigator: AppNavigator
+    private val getWeeklyWorkoutSummaryUseCase: GetWeeklyWorkoutSummaryUseCase,
+    private val appNavigator: AppNavigator,
+    private val timeUtils: TimeUtils
 ) : BaseViewModel<HomeState, HomeIntent>() {
 
     override fun initialData() = HomeState()
@@ -36,6 +45,9 @@ class HomeViewModel(
 
     private fun handleInitializationIntent() = viewModelScope.launch {
         launch {
+            updateState {
+                it.copy(title = getGreetings())
+            }
             initialiseHomeInfoCards()
         }
     }
@@ -43,7 +55,7 @@ class HomeViewModel(
     private suspend fun initialiseHomeInfoCards() {
         combine(
             flow = currentDayInfo(),
-            flow2 = currentDayInfo()
+            flow2 = weeklySummaryInfo()
         ) { currentDayInfo, weeklySummary ->
             listOf(currentDayInfo, weeklySummary)
         }.collect { homeInfoCards ->
@@ -52,6 +64,17 @@ class HomeViewModel(
                     homeInfoCards = homeInfoCards
                 )
             }
+        }
+    }
+
+    private fun getGreetings(): String {
+        val currentHour = timeUtils.getHourOfDay(System.currentTimeInMillis)
+        return when (timeUtils.getDayTimeRange(currentHour)) {
+            DayTimeRange.MORNING -> "Good Morning!"
+            DayTimeRange.AFTERNOON -> "Good Afternoon!"
+            DayTimeRange.EVENING,
+            DayTimeRange.NIGHT -> "Good Evening!"
+            null -> "Hello!"
         }
     }
 
@@ -66,7 +89,10 @@ class HomeViewModel(
                                 null
                             } else {
                                 HomeInfoCard.CurrentDayWorkoutDetails.WorkoutInfo(
+                                    workoutId = it.id,
+                                    workoutName = it.dayName,
                                     duration = it.workoutDuration,
+                                    formattedDuration = timeUtils.durationMillisToHourMinute(it.workoutDuration),
                                     totalExercises = it.exercises.size
                                 )
                             }
@@ -75,8 +101,17 @@ class HomeViewModel(
                 }
 
                 HomeInfoCard.CurrentDayWorkoutDetails(
-                    info = workoutInfoList
+                    info = workoutInfoList,
+                    today = getTodayInfoForCurrentDayCard()
                 )
             }
+    }
+
+    private fun getTodayInfoForCurrentDayCard(): String {
+        return timeUtils.getDateMonth(System.currentTimeInMillis)
+    }
+
+    private fun weeklySummaryInfo(): Flow<HomeInfoCard.WeeklyWorkoutSummary> {
+        return getWeeklyWorkoutSummaryUseCase.invoke(System.currentTimeInMillis)
     }
 }

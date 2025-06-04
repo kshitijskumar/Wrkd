@@ -20,6 +20,7 @@ data class CardCorners(
     val textField: Dp = 24.dp,
     val buttons: Dp = 16.dp,
     val dialog: Dp = 8.dp,
+    val homeInfoCard: Dp = 16.dp
 )
 
 data class Dimens(
@@ -43,7 +44,11 @@ data class AppColor(
     val primaryDarkBlue: Color = Color(0xFF1D3557),
     val white: Color = Color(0xFFFFFFFF),
     val lightGrey: Color = Color(0xFFf7f7f7),
-    val mediumGrey: Color = Color(0xFFeaeaea)
+    val mediumGrey: Color = Color(0xFFeaeaea),
+    val secondaryCardColor: Color = Color(0xFF00a843),
+    val primaryCardColor: Color = Color(0xFFef233c),
+    val indicatorSelectedColor: Color = Color(0xFFFFFFFF),
+    val indicatorUnselectedColor: Color = Color(0xFFFFFFFF).copy(alpha = 0.3f),
 )
 
 /*
