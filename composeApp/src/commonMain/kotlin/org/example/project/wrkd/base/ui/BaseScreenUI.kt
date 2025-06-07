@@ -43,7 +43,8 @@ fun BaseScreenUI(
         BaseScreenTabsScreenUI(
             selectedTab = state.selectedTab,
             homeViewModel = homeViewModel,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
         )
 
         BaseScreenBottomTabs(
@@ -52,7 +53,10 @@ fun BaseScreenUI(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = AppTheme.dimens.medium1)
-                .padding(bottom = AppTheme.dimens.medium1),
+                .padding(
+                    top = AppTheme.dimens.small2,
+                    bottom = AppTheme.dimens.medium1
+                ),
             onTabSelected = {
                 vm.processIntent(BaseScreenIntent.TabClickedIntent(it))
             }

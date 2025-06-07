@@ -1,14 +1,17 @@
 package org.example.project.wrkd.home.ui
 
+import org.example.project.wrkd.home.domain.WorkoutListSection
+
 data class HomeState(
     val title: String = "",
-    val homeInfoCards: List<HomeInfoCard> = listOf()
+    val homeInfoCards: List<HomeInfoCard> = listOf(),
+    val workoutInfoSections: List<WorkoutListSection>? = null
 )
 
 sealed class HomeIntent {
     data object InitializationIntent : HomeIntent()
 
-    data object DummyClickIntent: HomeIntent()
+    data object AddWorkoutClickedIntent: HomeIntent()
 }
 
 sealed class HomeInfoCard {

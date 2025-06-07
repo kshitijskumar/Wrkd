@@ -1,5 +1,8 @@
 package org.example.project.wrkd.utils
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
@@ -11,9 +14,12 @@ import kotlinx.datetime.toInstant
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.format
 import kotlinx.datetime.format.MonthNames
 import kotlinx.datetime.format.char
 import org.example.project.wrkd.core.models.WeekDay
+import org.example.project.wrkd.di.core.Injector
+import org.example.project.wrkd.di.core.inject
 import org.example.project.wrkd.utils.TimeFormattingStringUtils.convertToMin2Digs
 
 interface TimeUtils {
@@ -36,6 +42,18 @@ interface TimeUtils {
      */
     fun getDateMonth(millis: Long): String
 
+    fun isToday(millis: Long): Boolean
+
+    /**
+     * @return in format dd MMM, hh:mm
+     */
+    fun dateAndTime(millis: Long): String
+
+}
+
+@Composable
+fun rememberTimeUtils(): TimeUtils {
+    return remember { inject() }
 }
 
 class TimeUtilsImpl : TimeUtils {
@@ -156,6 +174,32 @@ class TimeUtilsImpl : TimeUtils {
         }
 
         return dateFormat.format(dateTime.date)
+    }
+
+    override fun isToday(millis: Long): Boolean {
+        val dateTime = millis.getDateTime()
+        val currentDateTime = System.currentTimeInMillis.getDateTime()
+        val currentDayStart = currentDateTime.date.atTime(hour = 0, minute = 0, second = 0)
+        val currentDayEnd = currentDateTime.date.atTime(hour = 23, minute = 59, second = 59)
+
+        return dateTime in (currentDayStart..currentDayEnd)
+    }
+
+    override fun dateAndTime(millis: Long): String {
+        val dateTime = millis.getDateTime()
+
+        val format = LocalDateTime.Format {
+            dayOfMonth()
+            char(' ')
+            monthName(MonthNames.ENGLISH_ABBREVIATED)
+            char(',')
+            char(' ')
+            hour()
+            char(':')
+            minute()
+        }
+
+        return dateTime.format(format)
     }
 
     private fun Long.getDateTime(): LocalDateTime {

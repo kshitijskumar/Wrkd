@@ -32,9 +32,12 @@ data class Dimens(
     val medium1: Dp = 16.dp,
     val medium2: Dp = 24.dp,
     val medium3: Dp = 32.dp,
+    val workoutSectionEmptyHeight: Dp = 72.dp,
+    val baseScreenTabScreenBottomSpace: Dp = 32.dp
 )
 
 data class AppColor(
+    val black10: Color = Color(0x1A000000),
     val black60: Color = Color(0x99000000),
     val black87: Color = Color(0xDE000000),
     val black: Color = Color(0xFF000000),
@@ -52,6 +55,7 @@ data class AppColor(
     val indicatorUnselectedColor: Color = Color(0xFFFFFFFF).copy(alpha = 0.3f),
     val selectedTabIcon: Color = Color(0xFFFFFFFF),
     val unselectedTabIcon: Color = Color(0xFFFFFFFF).copy(alpha = 0.5f),
+    val emptySectionBackground: Color = Color(0xFFf7f7f7),
 )
 
 /*

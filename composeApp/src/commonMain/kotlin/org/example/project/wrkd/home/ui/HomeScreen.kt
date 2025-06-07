@@ -1,6 +1,7 @@
 package org.example.project.wrkd.home.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -32,10 +36,16 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.example.project.wrkd.core.models.app.DayPlanAppModel
+import org.example.project.wrkd.core.models.app.ExercisePlanInfoAppModel
 import org.example.project.wrkd.core.ui.compose.AppTheme
+import org.example.project.wrkd.home.domain.WorkoutListSection
+import org.example.project.wrkd.home.domain.WorkoutSessionInfo
+import org.example.project.wrkd.utils.rememberTimeUtils
 import org.jetbrains.compose.resources.painterResource
 import wrkd.composeapp.generated.resources.Res
 import wrkd.composeapp.generated.resources.ic_cross_in_circle
@@ -85,6 +95,249 @@ private fun HomeScreenContent(
                     .padding(horizontal = horizontalPadding)
             )
         }
+
+        if (state.workoutInfoSections != null) {
+            workoutInfoSections(
+                sections = state.workoutInfoSections,
+                horizontalPadding = horizontalPadding,
+                sendIntent = sendIntent
+            )
+        }
+
+        item {
+            Spacer(Modifier.height(AppTheme.dimens.baseScreenTabScreenBottomSpace))
+        }
+    }
+}
+
+fun LazyListScope.workoutInfoSections(
+    sections: List<WorkoutListSection>,
+    horizontalPadding: Dp,
+    sendIntent: (HomeIntent) -> Unit
+) {
+    if (sections.isEmpty()) {
+        item {
+            WorkoutSectionEmptyComponent(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(AppTheme.dimens.workoutSectionEmptyHeight)
+                    .padding(
+                        horizontal = horizontalPadding,
+                        vertical = AppTheme.dimens.medium1
+                    )
+                    .clickable {
+                        sendIntent.invoke(HomeIntent.AddWorkoutClickedIntent)
+                    }
+            )
+        }
+    } else {
+        sections.forEach {
+            item {
+                Text(
+                    text = it.title,
+                    color = AppTheme.color.black87,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = horizontalPadding,
+                            vertical = AppTheme.dimens.medium1
+                        ),
+                    fontWeight = FontWeight.ExtraBold,
+                    style = AppTheme.typography.h5
+                )
+            }
+
+            itemsIndexed(it.workoutSessionsList) { index, sessionInfo ->
+                WorkoutSectionSessionCard(
+                    data = sessionInfo,
+                    onClick = {},
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = horizontalPadding
+                        )
+                        .padding(
+                            top = if (index != 0) AppTheme.dimens.medium1 else AppTheme.dimens.small0
+                        )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun WorkoutSectionSessionCard(
+    data: WorkoutSessionInfo,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(AppTheme.corners.homeInfoCard),
+        elevation = AppTheme.dimens.small2
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(
+                    horizontal = AppTheme.dimens.medium1,
+                    vertical = AppTheme.dimens.medium1
+                )
+        ) {
+            WorkoutSectionCardHeader(
+                title = data.workoutName,
+                startedAt = data.startedAt
+            )
+
+            Spacer(Modifier.height(AppTheme.dimens.small3))
+
+            WorkoutSectionExercisesList(
+                list = data.exercises,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+fun WorkoutSectionExercisesList(
+    list: List<ExercisePlanInfoAppModel>,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+    ) {
+        val style = AppTheme.typography.body2
+        val textColor = AppTheme.color.black60
+
+        list.forEachIndexed { index, exercise ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        vertical = AppTheme.dimens.small1
+                    )
+                    .padding(
+                        top = if (index != 0) AppTheme.dimens.small1 else AppTheme.dimens.small0
+                    )
+            ) {
+                Text(
+                    text = exercise.name,
+                    style = style,
+                    color = textColor,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = exercise.setSummary(),
+                    style = style,
+                    color = textColor,
+                    modifier = Modifier,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+private fun ExercisePlanInfoAppModel.setSummary(): String {
+    val setCount = sets.size
+    val minReps = sets.minBy { it.repsCount }.repsCount
+    val maxReps = sets.maxBy { it.repsCount }.repsCount
+
+    return if (minReps == maxReps) {
+        "$setCount x $minReps reps"
+    } else {
+        "$setCount x ($minReps - $maxReps) reps"
+    }
+}
+
+@Composable
+fun WorkoutSectionCardHeader(
+    title: String,
+    startedAt: Long,
+    modifier: Modifier = Modifier
+) {
+    val timeUtils = rememberTimeUtils()
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = title,
+            modifier = Modifier.weight(1f),
+            color = AppTheme.color.black87,
+            style = AppTheme.typography.h6,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Box(
+            modifier = Modifier
+                .background(
+                    color = AppTheme.color.lightGrey,
+                    shape = CircleShape
+                )
+                .border(
+                    width = AppTheme.dimens.small1,
+                    color = AppTheme.color.black10,
+                    shape = CircleShape
+                )
+                .padding(
+                    vertical = AppTheme.dimens.small2,
+                    horizontal = AppTheme.dimens.medium1
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = timeUtils.dateAndTime(startedAt),
+                color = AppTheme.color.black60,
+                style = AppTheme.typography.subtitle2,
+                fontWeight = FontWeight.Normal,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun WorkoutSectionEmptyComponent(
+    title: String = "No workout sessions logged",
+    subtitle: String = "Add the workout to get the week started",
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .background(
+                color = AppTheme.color.emptySectionBackground,
+                shape = RoundedCornerShape(AppTheme.corners.homeInfoCard)
+            )
+            .padding(AppTheme.dimens.medium2),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = title,
+            textAlign = TextAlign.Center,
+            style = AppTheme.typography.h6,
+            color = AppTheme.color.black87,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(Modifier.height(AppTheme.dimens.small3))
+
+        Text(
+            text = subtitle,
+            textAlign = TextAlign.Center,
+            style = AppTheme.typography.subtitle1,
+            color = AppTheme.color.black60,
+            fontWeight = FontWeight.Normal
+        )
     }
 }
 
@@ -145,7 +398,7 @@ fun HomeInfoCardComponent(
             ) {
                 CurrentDayWorkoutComponent(
                     data = data,
-                    onAddClick = { sendIntent.invoke(HomeIntent.DummyClickIntent) },
+                    onAddClick = { sendIntent.invoke(HomeIntent.AddWorkoutClickedIntent) },
                     onWorkoutClick = {  }
                 )
             }

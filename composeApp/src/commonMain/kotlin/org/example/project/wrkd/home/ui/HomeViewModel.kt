@@ -5,18 +5,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import org.example.project.wrkd.core.models.app.DayPlanAppModel
-import org.example.project.wrkd.core.models.dayName
 import org.example.project.wrkd.core.navigation.AppNavigator
-import org.example.project.wrkd.core.navigation.args.SceneArgs
 import org.example.project.wrkd.core.navigation.args.WorkoutTrackingArgs
-import org.example.project.wrkd.core.navigation.scenes.AppScenes
 import org.example.project.wrkd.core.ui.BaseViewModel
 import org.example.project.wrkd.home.domain.GetAllWorkoutBetweenGivenTimestampUseCase
 import org.example.project.wrkd.home.domain.GetWeeklyWorkoutSummaryUseCase
+import org.example.project.wrkd.home.domain.GetWorkoutSessionSectionUseCase
+import org.example.project.wrkd.home.domain.SectionLogic
+import org.example.project.wrkd.home.domain.WorkoutListSection
+import org.example.project.wrkd.home.domain.WorkoutSessionInfo
 import org.example.project.wrkd.utils.DayTimeRange
 import org.example.project.wrkd.utils.System
 import org.example.project.wrkd.utils.TimeUtils
@@ -25,7 +23,8 @@ class HomeViewModel(
     private val getAllWorkoutBetweenGivenTimestampUseCase: GetAllWorkoutBetweenGivenTimestampUseCase,
     private val getWeeklyWorkoutSummaryUseCase: GetWeeklyWorkoutSummaryUseCase,
     private val appNavigator: AppNavigator,
-    private val timeUtils: TimeUtils
+    private val timeUtils: TimeUtils,
+    private val getWorkoutSessionSectionUseCase: GetWorkoutSessionSectionUseCase
 ) : BaseViewModel<HomeState, HomeIntent>() {
 
     override fun initialData() = HomeState()
@@ -37,18 +36,21 @@ class HomeViewModel(
     override fun processIntent(intent: HomeIntent) {
         when(intent) {
             HomeIntent.InitializationIntent -> handleInitializationIntent()
-            HomeIntent.DummyClickIntent -> {
+            HomeIntent.AddWorkoutClickedIntent -> {
                 appNavigator.navigate(WorkoutTrackingArgs)
             }
         }
     }
 
     private fun handleInitializationIntent() = viewModelScope.launch {
+        updateState {
+            it.copy(title = getGreetings())
+        }
         launch {
-            updateState {
-                it.copy(title = getGreetings())
-            }
             initialiseHomeInfoCards()
+        }
+        launch {
+            initialiseThisWeekWorkoutSection()
         }
     }
 
@@ -62,6 +64,16 @@ class HomeViewModel(
             updateState {
                 it.copy(
                     homeInfoCards = homeInfoCards
+                )
+            }
+        }
+    }
+
+    private suspend fun initialiseThisWeekWorkoutSection() {
+        getWorkoutWeeklySessionsSections().collect { sections ->
+            updateState {
+                it.copy(
+                    workoutInfoSections = sections
                 )
             }
         }
@@ -113,5 +125,11 @@ class HomeViewModel(
 
     private fun weeklySummaryInfo(): Flow<HomeInfoCard.WeeklyWorkoutSummary> {
         return getWeeklyWorkoutSummaryUseCase.invoke(System.currentTimeInMillis)
+    }
+
+    private fun getWorkoutWeeklySessionsSections(): Flow<List<WorkoutListSection>> {
+        return getWorkoutSessionSectionUseCase.invoke(
+            sectionLogic = SectionLogic.TodayAndCurrentWeek
+        )
     }
 }
