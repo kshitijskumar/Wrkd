@@ -65,6 +65,7 @@ kotlin {
             implementation(libs.date.time)
 
             implementation(libs.sqldelight.coroutines.exts)
+            implementation(libs.ui.backhandler)
         }
         iosMain.dependencies {
             implementation(libs.native.driver)

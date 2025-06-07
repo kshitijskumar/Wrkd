@@ -14,9 +14,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import org.example.project.wrkd.base.ui.BaseScreenUI
 import org.example.project.wrkd.core.navigation.AppNavigatorManager
 import org.example.project.wrkd.core.navigation.NavigationData
-import org.example.project.wrkd.core.navigation.args.HomeArgs
+import org.example.project.wrkd.core.navigation.args.AppBaseScreenArgs
 import org.example.project.wrkd.core.navigation.args.WorkoutTrackingArgs
 import org.example.project.wrkd.core.navigation.scenes.AppScenes
 import org.example.project.wrkd.core.navigation.utils.viewModel
@@ -41,7 +42,7 @@ fun App() {
 
             NavHost(
                 navController = navController,
-                startDestination = AppScenes.Home.route
+                startDestination = AppScenes.AppBaseScreen.route
             ) {
                 AppScenes.entries.forEach {
                     buildScreens(it)
@@ -73,13 +74,16 @@ fun SceneContent(
 ) {
     when(val args = NavigationData.getOptionalArgs(backStackEntry)) {
         WorkoutTrackingArgs -> WorkoutTrackerScreen(vm = args.viewModel(backStackEntry))
-        HomeArgs,
+        AppBaseScreenArgs,
         null -> {
             // handling null as home because it will be the start destination and we will not get any args
             // ideally if you are changing the start destination, then handle null for that screen, and for all other screens
             // we will always have the args from backstack entry because args are necessary for navigation
-            val homeArgs = args ?: HomeArgs // default home args for start destination
-            HomeScreen(vm = homeArgs.viewModel(backStackEntry))
+            val baseArgs = args ?: AppBaseScreenArgs // default home args for start destination
+            BaseScreenUI(
+                vm = baseArgs.viewModel(backStackEntry),
+                homeViewModel = viewModel(backStackEntry, baseArgs.toString())
+            )
         }
     }
 }

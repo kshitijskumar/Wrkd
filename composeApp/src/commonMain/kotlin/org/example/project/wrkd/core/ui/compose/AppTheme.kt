@@ -30,7 +30,8 @@ data class Dimens(
     val small3: Dp = 8.dp,
     val small4: Dp = 12.dp,
     val medium1: Dp = 16.dp,
-    val medium2: Dp = 24.dp
+    val medium2: Dp = 24.dp,
+    val medium3: Dp = 32.dp,
 )
 
 data class AppColor(
@@ -49,6 +50,8 @@ data class AppColor(
     val primaryCardColor: Color = Color(0xFFef233c),
     val indicatorSelectedColor: Color = Color(0xFFFFFFFF),
     val indicatorUnselectedColor: Color = Color(0xFFFFFFFF).copy(alpha = 0.3f),
+    val selectedTabIcon: Color = Color(0xFFFFFFFF),
+    val unselectedTabIcon: Color = Color(0xFFFFFFFF).copy(alpha = 0.5f),
 )
 
 /*

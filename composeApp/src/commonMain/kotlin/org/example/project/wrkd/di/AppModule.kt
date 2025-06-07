@@ -2,6 +2,7 @@ package org.example.project.wrkd.di
 
 import org.example.project.wrkd.addworkout.WorkoutRoutinePlanner
 import org.example.project.wrkd.addworkout.ui.DayPlanViewModel
+import org.example.project.wrkd.base.ui.BaseScreenViewModel
 import org.example.project.wrkd.core.db.AppDB
 import org.example.project.wrkd.core.db.dao.WorkoutDaoImpl
 import org.example.project.wrkd.core.local.UserDataLocalDataSource
@@ -135,6 +136,12 @@ private fun Module.Builder.home() {
             getWeeklyWorkoutSummaryUseCase = inject(),
             appNavigator = inject(),
             timeUtils = inject()
+        )
+    }
+
+    factory {
+        BaseScreenViewModel(
+            navigator = inject()
         )
     }
 }

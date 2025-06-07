@@ -16,3 +16,17 @@ inline fun <reified T: ViewModel> SceneArgs.viewModel(navBackStackEntry: NavBack
         }
     }
 }
+
+inline fun <reified T: ViewModel> viewModel(
+    navBackStackEntry: NavBackStackEntry,
+    identifier: String = "",
+): T {
+    val existing = navBackStackEntry.viewModelStore["${T::class.simpleName}_${identifier}"]
+    return if (existing is T) {
+        existing
+    } else {
+        inject<T>().also {
+            navBackStackEntry.viewModelStore.put("${T::class.simpleName}_${identifier}", it)
+        }
+    }
+}
