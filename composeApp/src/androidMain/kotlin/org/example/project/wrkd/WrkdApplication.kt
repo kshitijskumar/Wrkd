@@ -38,14 +38,6 @@ class WrkdApplication : Application() {
 
         val vm = inject<DayPlanViewModel>(args = listOf(DayPlanArgs(WeekDay.Mon)))
         println("InjectStuff: vm: $vm")
-//        val t1 = inject<Test1>()
-//        val t2 = inject<Test1>() // should have diff hash
-//        val t3 = inject<Test1>(name = "myname")
-//        val t4 = inject<Test2>()
-//        val t5 = inject<Test2>() // same hash
-//        println("InjectStuff: first: $t1 -- $t2 :: ${t1.hashCode()} -- ${t2.hashCode()}")
-//        println("InjectStuff: second: $t3")
-//        println("InjectStuff: third: $t4 -- $t5 :: ${t4.hashCode()} -- ${t5.hashCode()}")
     }
 
 }
