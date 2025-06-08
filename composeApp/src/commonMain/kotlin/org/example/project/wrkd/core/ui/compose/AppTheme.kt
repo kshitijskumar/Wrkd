@@ -32,7 +32,7 @@ data class Dimens(
     val medium1: Dp = 16.dp,
     val medium2: Dp = 24.dp,
     val medium3: Dp = 32.dp,
-    val workoutSectionEmptyHeight: Dp = 72.dp,
+    val workoutSectionEmptyHeight: Dp = 200.dp,
     val baseScreenTabScreenBottomSpace: Dp = 32.dp
 )
 

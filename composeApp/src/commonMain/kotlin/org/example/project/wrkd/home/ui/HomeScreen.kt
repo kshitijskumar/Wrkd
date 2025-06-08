@@ -317,7 +317,7 @@ fun WorkoutSectionEmptyComponent(
                 color = AppTheme.color.emptySectionBackground,
                 shape = RoundedCornerShape(AppTheme.corners.homeInfoCard)
             )
-            .padding(AppTheme.dimens.medium2),
+            .padding(AppTheme.dimens.medium1),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -530,7 +530,7 @@ fun CurrentDayEmptyWorkoutState(
         Icon(
             painter = painterResource(Res.drawable.ic_cross_in_circle),
             modifier = Modifier
-                .fillMaxWidth(0.4f)
+                .fillMaxWidth(0.25f)
                 .aspectRatio(1f),
             tint = AppTheme.color.white,
             contentDescription = null,
@@ -539,7 +539,7 @@ fun CurrentDayEmptyWorkoutState(
         Spacer(Modifier.height(AppTheme.dimens.small3))
 
         Text(
-            text = "Click to log workout",
+            text = "No workout logged yet",
             modifier = Modifier.fillMaxWidth(),
             color = AppTheme.color.white,
             textAlign = TextAlign.Center,
