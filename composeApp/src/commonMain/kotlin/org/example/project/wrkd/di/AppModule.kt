@@ -30,6 +30,7 @@ import org.example.project.wrkd.track.data.local.WorkoutLocalDataSource
 import org.example.project.wrkd.track.data.local.WorkoutLocalDataSourceImpl
 import org.example.project.wrkd.track.data.repo.WorkoutRepository
 import org.example.project.wrkd.track.data.repo.WorkoutRepositoryImpl
+import org.example.project.wrkd.track.domain.GetDistinctExercisesForDayBetweenTimestampUseCase
 import org.example.project.wrkd.track.domain.SaveWorkoutUseCase
 import org.example.project.wrkd.track.ui.WorkoutTrackerViewModel
 import org.example.project.wrkd.utils.TimeUtils
@@ -66,9 +67,12 @@ fun appModule(): Module {
 
         factory {
             WorkoutTrackerViewModel(
+                args = inject(),
                 timeUtils = inject(),
                 workoutTrackManager = inject(),
-                saveWorkoutUseCase = inject()
+                saveWorkoutUseCase = inject(),
+                getDistinctExercisesForDayBetweenTimestampUseCase = inject(),
+                appNavigator = inject()
             )
         }
 
@@ -111,6 +115,13 @@ fun appModule(): Module {
             }
         ) {
             AppNavigatorImpl()
+        }
+
+        factory {
+            GetDistinctExercisesForDayBetweenTimestampUseCase(
+                repository = inject(),
+                timeUtils = inject()
+            )
         }
 
         home()

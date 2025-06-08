@@ -42,7 +42,7 @@ class BaseScreenViewModel(
     private fun handleTabClickedIntent(intent: BaseScreenIntent.TabClickedIntent) {
         when(intent.tab) {
             BaseScreenTabs.ADD -> {
-                navigator.navigate(WorkoutTrackingArgs)
+                navigator.navigate(WorkoutTrackingArgs.TrackingArgs)
             }
             BaseScreenTabs.HOME,
             BaseScreenTabs.PROGRESS -> {

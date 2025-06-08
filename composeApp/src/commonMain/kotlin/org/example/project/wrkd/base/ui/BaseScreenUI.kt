@@ -104,7 +104,7 @@ fun BaseScreenBottomTabs(
             )
             .padding(
                 horizontal = AppTheme.dimens.small3,
-                vertical = AppTheme.dimens.medium2
+                vertical = AppTheme.dimens.bottomTabsVerticalPadding
             ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceEvenly

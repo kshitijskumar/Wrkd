@@ -73,6 +73,23 @@ class WorkoutDaoImpl(
             }
     }
 
+    override fun getDistinctExerciseNameForDayBetweenTimestamps(
+        day: WeekDay,
+        start: Long,
+        end: Long,
+    ): Flow<List<String>> {
+        return workoutDayTablequeries.getDistinctExercisesForDayBetween(
+            startedAt = start,
+            startedAt_ = end,
+            day = day
+        )
+            .asFlow()
+            .mapToList(coroutinesContextProvider.io)
+            .map { list ->
+                list.mapNotNull { it.name }
+            }
+    }
+
     private fun List<CombinedWorkoutData>.toDayPlanEntity(): List<DayPlanEntity>? {
         if (this.isEmpty()) {
             return null

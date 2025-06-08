@@ -17,14 +17,24 @@ class WorkoutTrackerManagerImpl : WorkoutTrackManager {
     override val state: StateFlow<List<ExercisePlanInfoAppModel>> = _state.asStateFlow()
 
     override fun addExercise() {
-        // when adding exercise create an empty placeholder and have a prefilled set
-        val exercise = ExercisePlanInfoAppModel(
-            name = "",
-            exerciseId = KUUID.generateId(),
-            sets = listOf(ExerciseSetInfoAppModel.defaultSet())
-        )
+        addExercise(name = "")
+    }
 
-        _state.update { it + exercise }
+    override fun addExercise(name: String) {
+        addExercises(listOf(name))
+    }
+
+    override fun addExercises(list: List<String>) {
+        // when adding exercise have a prefilled set
+        val exerciseList = list.map {
+            ExercisePlanInfoAppModel(
+                name = it,
+                exerciseId = KUUID.generateId(),
+                sets = listOf(ExerciseSetInfoAppModel.defaultSet())
+            )
+        }
+
+        _state.update { it + exerciseList }
     }
 
     override fun changeExerciseName(id: String, nameEntered: String) {

@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.example.project.wrkd.core.mappers.toAppModel
 import org.example.project.wrkd.core.mappers.toEntity
+import org.example.project.wrkd.core.models.WeekDay
 import org.example.project.wrkd.core.models.app.DayPlanAppModel
 import org.example.project.wrkd.track.data.local.WorkoutLocalDataSource
 
@@ -20,5 +21,17 @@ class WorkoutRepositoryImpl(
             .map { list ->
                 list.map { it.toAppModel() }
             }
+    }
+
+    override fun getDistinctExerciseNameForDayBetweenTimestamps(
+        day: WeekDay,
+        start: Long,
+        end: Long,
+    ): Flow<List<String>> {
+        return localDataSource.getDistinctExerciseNameForDayBetweenTimestamps(
+            day = day,
+            start = start,
+            end = end
+        )
     }
 }

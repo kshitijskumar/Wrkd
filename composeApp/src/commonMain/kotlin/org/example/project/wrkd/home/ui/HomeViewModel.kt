@@ -37,7 +37,7 @@ class HomeViewModel(
         when(intent) {
             HomeIntent.InitializationIntent -> handleInitializationIntent()
             HomeIntent.AddWorkoutClickedIntent -> {
-                appNavigator.navigate(WorkoutTrackingArgs)
+                appNavigator.navigate(WorkoutTrackingArgs.TrackingArgs)
             }
         }
     }

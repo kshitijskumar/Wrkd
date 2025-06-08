@@ -3,23 +3,30 @@ package org.example.project.wrkd.track.ui
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.example.project.wrkd.core.models.WeekDay
 import org.example.project.wrkd.core.models.app.ExercisePlanInfoAppModel
 import org.example.project.wrkd.core.models.app.isValid
 import org.example.project.wrkd.core.models.dayName
+import org.example.project.wrkd.core.navigation.AppNavigator
+import org.example.project.wrkd.core.navigation.args.WorkoutTrackingArgs
 import org.example.project.wrkd.core.ui.BaseViewModel
 import org.example.project.wrkd.track.WorkoutTrackManager
+import org.example.project.wrkd.track.domain.GetDistinctExercisesForDayBetweenTimestampUseCase
 import org.example.project.wrkd.track.domain.SaveWorkoutUseCase
 import org.example.project.wrkd.utils.DayTimeRange
 import org.example.project.wrkd.utils.System
 import org.example.project.wrkd.utils.TimeUtils
 
 class WorkoutTrackerViewModel(
+    args: WorkoutTrackingArgs,
     private val timeUtils: TimeUtils,
     private val workoutTrackManager: WorkoutTrackManager,
-    private val saveWorkoutUseCase: SaveWorkoutUseCase
+    private val saveWorkoutUseCase: SaveWorkoutUseCase,
+    private val appNavigator: AppNavigator,
+    private val getDistinctExercisesForDayBetweenTimestampUseCase: GetDistinctExercisesForDayBetweenTimestampUseCase
 ) : BaseViewModel<WorkoutTrackerState, WorkoutTrackerIntent>() {
 
     override fun initialData(): WorkoutTrackerState {
@@ -27,26 +34,16 @@ class WorkoutTrackerViewModel(
     }
 
     private var toggleTimerJob: Job? = null
+    private var workoutManagerJob: Job? = null
 
     init {
-        processIntent(WorkoutTrackerIntent.InitializationIntent)
-        viewModelScope.launch {
-            workoutTrackManager.state.collect { exerciseList ->
-                println("TrackingStuff: collect: $exerciseList")
-                updateState {
-                    it.copy(
-                        exercises = exerciseList,
-                        isExerciseAdditionAllowed = isExerciseAdditionAllowed(exerciseList)
-                    )
-                }
-            }
-        }
+        processIntent(WorkoutTrackerIntent.InitializationIntent(args))
     }
 
     override fun processIntent(intent: WorkoutTrackerIntent) {
         println("WorkoutTrackerViewModel: processIntent: $intent")
         when (intent) {
-            WorkoutTrackerIntent.InitializationIntent -> handleInitializationIntent()
+            is WorkoutTrackerIntent.InitializationIntent -> handleInitializationIntent(intent)
             is WorkoutTrackerIntent.AddExerciseIntent -> handleAddExerciseIntent(intent)
             is WorkoutTrackerIntent.AddRepsCountIntent -> handleAddRepsCountIntent(intent)
             is WorkoutTrackerIntent.AddSetIntent -> handleAddSetIntent(intent)
@@ -57,18 +54,28 @@ class WorkoutTrackerViewModel(
             is WorkoutTrackerIntent.WorkoutDayNameEnteredIntent -> handleWorkoutDayNameEnteredIntent(intent)
             is WorkoutTrackerIntent.WeightChangeIntent -> handleWorkoutWeightChangeIntent(intent)
             WorkoutTrackerIntent.DismissDialogIntent -> handleDismissDialogIntent()
+            is WorkoutTrackerIntent.ExerciseClickedInStartScreen -> handleExerciseClickedInStartScreen(intent)
+            WorkoutTrackerIntent.StartWorkoutIntent -> handleStartWorkoutIntent()
+            WorkoutTrackerIntent.BackClickedIntent -> handleBackClickedIntent()
         }
     }
 
-    private fun handleInitializationIntent() {
+    private fun handleInitializationIntent(intent: WorkoutTrackerIntent.InitializationIntent) {
         val currentDate = System.currentTimeInMillis
         val week = timeUtils.getWeekFromTime(currentDate)
 
         if (week == null) {
-            // TODO::KSHITIJ - add back navigation -> although should never happen
+            // should not happen
+            appNavigator.goBack()
             return
         }
 
+        when(intent.args) {
+            WorkoutTrackingArgs.TrackingArgs -> {
+                initialiseForTrackingArgs(week, currentDate)
+            }
+            is WorkoutTrackingArgs.DisplayArgs -> TODO()
+        }
         updateState {
             it.copy(
                 week = week,
@@ -81,12 +88,50 @@ class WorkoutTrackerViewModel(
         }
     }
 
+    private fun initialiseForTrackingArgs(
+        week: WeekDay,
+        currentDate: Long,
+    ) = viewModelScope.launch {
+        val previousExercises =
+            getDistinctExercisesForDayBetweenTimestampUseCase.forGivenDayInLastMonth(
+                time = currentDate
+            ).firstOrNull() ?: listOf()
+
+        updateState { currentState ->
+            currentState.copy(
+                week = week,
+                date = currentDate,
+                workoutDayName = defaultWorkoutDayName(
+                    weekDay = week,
+                    startTime = currentDate
+                ),
+                screenState = WorkoutTrackerScreenState.StartScreen(
+                    previousExercises = previousExercises.map {
+                        PreviousExerciseSelection(
+                            exerciseName = it,
+                            isSelected = false
+                        )
+                    }
+                ),
+                previousExercisesName = previousExercises
+            )
+        }
+    }
+
     private fun handleAddExerciseIntent(intent: WorkoutTrackerIntent.AddExerciseIntent) {
-        if (currentState.isExerciseAdditionAllowed.not()) {
+        if (isExerciseAdditionAllowed().not()) {
             return // shouldn't happen
         }
 
         workoutTrackManager.addExercise()
+    }
+
+    fun isExerciseAdditionAllowed(): Boolean {
+        return when(val state = currentState.screenState) {
+            is WorkoutTrackerScreenState.TrackerScreen -> state.isExerciseAdditionAllowed
+            is WorkoutTrackerScreenState.StartScreen,
+            null -> false
+        }
     }
 
     private fun handleAddRepsCountIntent(intent: WorkoutTrackerIntent.AddRepsCountIntent) {
@@ -157,7 +202,13 @@ class WorkoutTrackerViewModel(
     }
 
     private fun handleCompleteWorkoutIntent(intent: WorkoutTrackerIntent.CompleteWorkoutIntent) = viewModelScope.launch {
-        val exercisesList = currentState.exercises ?: listOf()
+        val currentState = currentState
+        val screenState = when(currentState.screenState) {
+            is WorkoutTrackerScreenState.TrackerScreen -> currentState.screenState
+            is WorkoutTrackerScreenState.StartScreen,
+            null -> return@launch // complete wont be called for start screen
+        }
+        val exercisesList = screenState.exercises ?: listOf()
         val weekDay = currentState.week
         val startedAt = currentState.date
         when {
@@ -215,6 +266,90 @@ class WorkoutTrackerViewModel(
             it.copy(
                 dialogType = null
             )
+        }
+    }
+
+    private fun handleExerciseClickedInStartScreen(intent: WorkoutTrackerIntent.ExerciseClickedInStartScreen) {
+        updateState {
+            val updatedScreenState = when(val screenState = it.screenState) {
+                is WorkoutTrackerScreenState.StartScreen -> {
+                    screenState.copy(
+                        previousExercises = screenState.previousExercises?.map {
+                            if (it.exerciseName == intent.name) {
+                                it.copy(isSelected = !it.isSelected)
+                            } else {
+                                it
+                            }
+                        }
+                    )
+                }
+                is WorkoutTrackerScreenState.TrackerScreen,
+                null -> screenState
+            }
+
+            it.copy(
+                screenState = updatedScreenState
+            )
+        }
+    }
+
+    private fun handleStartWorkoutIntent() {
+        val exercisesSelected = when(val state = currentState.screenState) {
+            is WorkoutTrackerScreenState.StartScreen -> {
+                state.previousExercises
+                    ?.filter { it.isSelected }
+                    ?.sortedBy { it.selectedAt ?: 0L } ?: return
+            }
+            is WorkoutTrackerScreenState.TrackerScreen, // start wont be called when current screen is already tracker screen
+            null -> return
+        }
+
+        updateState {
+            it.copy(
+                date = System.currentTimeInMillis,
+                screenState = WorkoutTrackerScreenState.TrackerScreen()
+            )
+        }
+        workoutTrackManager.addExercises(exercisesSelected.map { it.exerciseName })
+        startCollectingWorkoutTrackManager()
+    }
+
+    private fun handleBackClickedIntent() {
+        when(currentState.screenState) {
+            is WorkoutTrackerScreenState.TrackerScreen -> TODO()
+            is WorkoutTrackerScreenState.StartScreen,
+            null -> {
+                appNavigator.goBack()
+            }
+        }
+    }
+
+    private fun startCollectingWorkoutTrackManager() {
+        workoutManagerJob?.cancel()
+        workoutManagerJob = viewModelScope.launch {
+            workoutTrackManager.state.collect { exerciseList ->
+                updateState { currentState ->
+                    val updatedScreenState = when(val screenState = currentState.screenState) {
+                        is WorkoutTrackerScreenState.TrackerScreen -> {
+                            screenState.copy(
+                                exercises = exerciseList,
+                                isExerciseAdditionAllowed = isExerciseAdditionAllowed(exerciseList)
+                            )
+                        }
+                        is WorkoutTrackerScreenState.StartScreen,
+                        null -> {
+                            WorkoutTrackerScreenState.TrackerScreen(
+                                exercises = exerciseList,
+                                isExerciseAdditionAllowed = isExerciseAdditionAllowed(exerciseList)
+                            )
+                        }
+                    }
+
+                    currentState.copy(
+                        screenState = updatedScreenState
+                    )
+                }
+            }
         }
     }
 

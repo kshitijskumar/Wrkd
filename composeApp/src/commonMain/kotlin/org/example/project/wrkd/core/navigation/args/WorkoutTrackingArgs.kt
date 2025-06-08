@@ -4,7 +4,13 @@ import kotlinx.serialization.Serializable
 import org.example.project.wrkd.core.navigation.scenes.AppScenes
 
 @Serializable
-data object WorkoutTrackingArgs : SceneArgs() {
+sealed class WorkoutTrackingArgs : SceneArgs() {
     override val scene: AppScenes
         get() = AppScenes.WorkoutTracking
+
+    @Serializable
+    data object TrackingArgs : WorkoutTrackingArgs()
+
+    @Serializable
+    data class DisplayArgs(val workoutId: String) : WorkoutTrackingArgs()
 }

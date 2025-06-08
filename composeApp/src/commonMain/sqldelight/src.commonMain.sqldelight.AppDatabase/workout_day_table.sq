@@ -53,3 +53,10 @@ LEFT JOIN Exercise_table ed ON ed.workoutId = wd.id
 LEFT JOIN Set_table sd ON ed.id = sd.exerciseId
 WHERE wd.startedAt >= ? AND wd.startedAt <= ?
 ORDER BY wd.startedAt DESC;
+
+getDistinctExercisesForDayBetween:
+SELECT DISTINCT ed.name
+FROM Workout_day_table wd
+LEFT JOIN Exercise_table ed ON ed.workoutId = wd.id
+WHERE wd.startedAt >= ? AND wd.startedAt <= ? AND wd.day = ?
+ORDER BY wd.startedAt DESC;

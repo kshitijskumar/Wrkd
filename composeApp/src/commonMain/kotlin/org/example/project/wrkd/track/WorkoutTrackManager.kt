@@ -10,6 +10,10 @@ interface WorkoutTrackManager {
 
     fun addExercise()
 
+    fun addExercise(name: String)
+
+    fun addExercises(list: List<String>)
+
     fun changeExerciseName(id: String, nameEntered: String)
 
     fun addSet(exerciseId: String)

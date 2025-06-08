@@ -1,5 +1,6 @@
 package org.example.project.wrkd.core.ui.compose
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Button
 import androidx.compose.material.ButtonColors
@@ -21,7 +22,7 @@ fun AppPrimaryButton(
         text = text,
         onClick = onClick,
         colors = ButtonDefaults.buttonColors(
-            backgroundColor = AppTheme.color.primaryDarkBlue
+            backgroundColor = AppTheme.color.black
         ),
         textColor = AppTheme.color.white,
         enabled = enabled,
@@ -40,9 +41,9 @@ fun AppSecondaryButton(
         text = text,
         onClick = onClick,
         colors = ButtonDefaults.buttonColors(
-            backgroundColor = AppTheme.color.primaryTeal
+            backgroundColor = AppTheme.color.primaryRed
         ),
-        textColor = AppTheme.color.black87,
+        textColor = AppTheme.color.white,
         enabled = enabled,
         modifier = modifier
     )
@@ -93,7 +94,8 @@ fun AppButton(
         Text(
             text = text,
             style = AppTheme.typography.button,
-            color = textColor
+            color = textColor,
+            modifier = Modifier.padding(AppTheme.dimens.small3)
         )
     }
 }

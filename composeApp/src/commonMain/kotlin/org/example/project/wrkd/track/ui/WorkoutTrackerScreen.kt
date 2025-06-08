@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,9 +19,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.BottomSheetScaffold
+import androidx.compose.material.BottomSheetValue
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
 import androidx.compose.material.Divider
@@ -30,6 +34,10 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.SnackbarHost
 import androidx.compose.material.SnackbarHostState
 import androidx.compose.material.Text
+import androidx.compose.material.rememberBottomDrawerState
+import androidx.compose.material.rememberBottomSheetScaffoldState
+import androidx.compose.material.rememberBottomSheetState
+import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,7 +45,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
@@ -49,14 +59,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.example.project.wrkd.core.models.WeekDay
 import org.example.project.wrkd.core.models.app.ExercisePlanInfoAppModel
 import org.example.project.wrkd.core.models.app.ExerciseResistanceMethod
 import org.example.project.wrkd.core.models.app.ExerciseSetInfoAppModel
 import org.example.project.wrkd.core.models.app.WeightInGrams
 import org.example.project.wrkd.core.models.app.displayString
 import org.example.project.wrkd.core.models.app.resistanceMethodName
+import org.example.project.wrkd.core.models.dayName
 import org.example.project.wrkd.core.navigation.scenes.AppScenes
 import org.example.project.wrkd.core.ui.compose.AppButton
+import org.example.project.wrkd.core.ui.compose.AppPrimaryButton
 import org.example.project.wrkd.core.ui.compose.AppSecondaryButton
 import org.example.project.wrkd.core.ui.compose.AppTextField
 import org.example.project.wrkd.core.ui.compose.AppTextFieldPlaceholder
@@ -69,8 +82,9 @@ import org.example.project.wrkd.di.core.inject
 import org.example.project.wrkd.utils.TimeFormattingStringUtils
 import org.jetbrains.compose.resources.painterResource
 import wrkd.composeapp.generated.resources.Res
-import wrkd.composeapp.generated.resources.ic_drop_down
+import wrkd.composeapp.generated.resources.*
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun WorkoutTrackerScreen(
     vm: WorkoutTrackerViewModel
@@ -78,6 +92,13 @@ fun WorkoutTrackerScreen(
 
     val state by vm.state.collectAsStateWithLifecycle(LocalLifecycleOwner.current)
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val scaffoldState = rememberBottomSheetScaffoldState(
+        snackbarHostState = snackbarHostState,
+        bottomSheetState = rememberBottomSheetState(
+            initialValue = BottomSheetValue.Collapsed
+        )
+    )
 
     LaunchedEffect(state.error) {
         val error = state.error
@@ -88,40 +109,52 @@ fun WorkoutTrackerScreen(
         }
     }
 
-    Scaffold(
+    BottomSheetScaffold(
+        sheetContent = {
+            Spacer(Modifier.height(0.dp))
+        },
         modifier = Modifier.fillMaxSize(),
         snackbarHost = {
             SnackbarHost(snackbarHostState)
-        }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(AppTheme.color.primaryBeige)
-        ) {
-            val exercises = state.exercises
-            when {
-                exercises == null -> {}
-                exercises.isEmpty() -> {
-                    EmptyWorkoutScreen(
-                        addExerciseClicked = {
-                            vm.processIntent(WorkoutTrackerIntent.AddExerciseIntent)
+        },
+        sheetPeekHeight = 0.dp,
+        sheetGesturesEnabled = false,
+        content = {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(AppTheme.color.white)
+            ) {
+                when(val screenState = state.screenState) {
+                    is WorkoutTrackerScreenState.StartScreen -> {
+                        WorkoutStartScreenContent(
+                            week = state.week,
+                            state = screenState,
+                            sendIntent = vm::processIntent
+                        )
+                    }
+                    is WorkoutTrackerScreenState.TrackerScreen -> {
+                        val exercises = screenState.exercises
+                        when {
+                            exercises == null -> {}
+                            else -> {
+                                WorkTrackingScreen(
+                                    exercises = exercises,
+                                    isExerciseAdditionAllowed = screenState.isExerciseAdditionAllowed,
+                                    restTimer = state.restTimer,
+                                    error = state.error,
+                                    sendIntent = vm::processIntent,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
-                    )
+                    }
+                    null -> {}
                 }
-                else -> {
-                    WorkTrackingScreen(
-                        exercises = exercises,
-                        isExerciseAdditionAllowed = state.isExerciseAdditionAllowed,
-                        restTimer = state.restTimer,
-                        error = state.error,
-                        sendIntent = vm::processIntent,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+
             }
         }
-    }
+    )
 
     state.dialogType?.let {
         WorkoutTrackerDialogHandling(
@@ -130,6 +163,167 @@ fun WorkoutTrackerScreen(
         )
     }
 
+    BackHandler {
+        vm.processIntent(WorkoutTrackerIntent.BackClickedIntent)
+    }
+
+}
+
+@Composable
+fun WorkoutStartScreenContent(
+    week: WeekDay?,
+    state: WorkoutTrackerScreenState.StartScreen,
+    sendIntent: (WorkoutTrackerIntent) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(
+                horizontal = AppTheme.dimens.medium1
+            )
+            .padding(
+                top = AppTheme.dimens.medium1,
+                bottom = AppTheme.dimens.small3
+            )
+    ) {
+        Text(
+            text = "Previous exercises done on ${(week?.dayName ?: "")}",
+            style = AppTheme.typography.h5,
+            fontWeight = FontWeight.Bold,
+            maxLines = 2,
+            color = AppTheme.color.black87,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(AppTheme.dimens.small2))
+
+        Text(
+            text = "Select exercises for a quick planning for the workout",
+            style = AppTheme.typography.subtitle1,
+            fontWeight = FontWeight.Normal,
+            color = AppTheme.color.black60,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(AppTheme.dimens.small2))
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentPadding = PaddingValues(
+                vertical = AppTheme.dimens.medium1
+            ),
+            verticalArrangement = Arrangement.spacedBy(AppTheme.dimens.medium1)
+        ) {
+            val exercises = state.previousExercises
+            when {
+                exercises == null -> {}
+                exercises.isEmpty() -> {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(AppTheme.dimens.workoutSectionEmptyHeight)
+                                .padding(horizontal = AppTheme.dimens.medium1),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No history of exercises for this day",
+                                style = AppTheme.typography.subtitle1,
+                                color = AppTheme.color.black60,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+                else -> {
+                    items(exercises) {
+                        PreviousExerciseSuggestionCard(
+                            data = it,
+                            onClick = {
+                                sendIntent.invoke(
+                                    WorkoutTrackerIntent.ExerciseClickedInStartScreen(it.exerciseName)
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(AppTheme.dimens.small3))
+
+        AppPrimaryButton(
+            text = "Start",
+            onClick = {
+                sendIntent.invoke(WorkoutTrackerIntent.StartWorkoutIntent)
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(AppTheme.dimens.small3))
+
+        AppSecondaryButton(
+            text = "Not now",
+            onClick = {
+                sendIntent.invoke(WorkoutTrackerIntent.BackClickedIntent)
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+fun PreviousExerciseSuggestionCard(
+    data: PreviousExerciseSelection,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(AppTheme.corners.mainCard)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(
+                    width = AppTheme.dimens.small1,
+                    color = AppTheme.color.black,
+                    shape = RoundedCornerShape(AppTheme.corners.mainCard)
+                )
+                .clickable(
+                    interactionSource = null,
+                    indication = null,
+                    onClick = onClick
+                )
+                .padding(
+                    horizontal = AppTheme.dimens.medium1,
+                    vertical = AppTheme.dimens.medium2
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = data.exerciseName,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = AppTheme.typography.subtitle1,
+                fontWeight = FontWeight.Normal
+            )
+
+            if (data.isSelected) {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_solid_tick),
+                    contentDescription = null,
+                    modifier = Modifier.size(AppTheme.dimens.medium2),
+                    tint = AppTheme.color.primaryRed
+                )
+            }
+        }
+    }
 }
 
 @Composable

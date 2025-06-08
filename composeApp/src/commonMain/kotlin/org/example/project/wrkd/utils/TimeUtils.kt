@@ -49,6 +49,10 @@ interface TimeUtils {
      */
     fun dateAndTime(millis: Long): String
 
+    companion object {
+        const val MILLIS_IN_A_DAY = 24 * 60 * 60 * 1000L
+    }
+
 }
 
 @Composable

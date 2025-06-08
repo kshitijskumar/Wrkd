@@ -73,7 +73,7 @@ fun SceneContent(
     backStackEntry: NavBackStackEntry
 ) {
     when(val args = NavigationData.getOptionalArgs(backStackEntry)) {
-        WorkoutTrackingArgs -> WorkoutTrackerScreen(vm = args.viewModel(backStackEntry))
+        is WorkoutTrackingArgs -> WorkoutTrackerScreen(vm = args.viewModel(backStackEntry))
         AppBaseScreenArgs,
         null -> {
             // handling null as home because it will be the start destination and we will not get any args
