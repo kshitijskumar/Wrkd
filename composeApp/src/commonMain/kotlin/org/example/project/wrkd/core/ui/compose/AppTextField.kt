@@ -46,6 +46,7 @@ fun AppTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     colors: TextFieldColors = TextFieldDefaults.appTextFieldColors(),
     shape: Shape = RoundedCornerShape(AppTheme.corners.textField),
+    readOnly: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -72,6 +73,7 @@ fun AppTextField(
                 keyboardController?.hide()
             }
         ),
+        readOnly = readOnly,
         shape = shape,
         colors = colors,
     )

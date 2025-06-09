@@ -1,14 +1,11 @@
 package org.example.project.wrkd.track.ui
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,66 +16,52 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.BottomSheetScaffold
-import androidx.compose.material.BottomSheetValue
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
-import androidx.compose.material.Divider
 import androidx.compose.material.Icon
-import androidx.compose.material.IconButton
-import androidx.compose.material.Scaffold
-import androidx.compose.material.SnackbarHost
+import androidx.compose.material.ModalBottomSheetLayout
+import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.SnackbarHostState
 import androidx.compose.material.Text
-import androidx.compose.material.rememberBottomDrawerState
-import androidx.compose.material.rememberBottomSheetScaffoldState
-import androidx.compose.material.rememberBottomSheetState
-import androidx.compose.material.rememberScaffoldState
+import androidx.compose.material.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.example.project.wrkd.core.models.WeekDay
 import org.example.project.wrkd.core.models.app.ExercisePlanInfoAppModel
-import org.example.project.wrkd.core.models.app.ExerciseResistanceMethod
 import org.example.project.wrkd.core.models.app.ExerciseSetInfoAppModel
-import org.example.project.wrkd.core.models.app.WeightInGrams
 import org.example.project.wrkd.core.models.app.displayString
-import org.example.project.wrkd.core.models.app.resistanceMethodName
 import org.example.project.wrkd.core.models.dayName
-import org.example.project.wrkd.core.navigation.scenes.AppScenes
 import org.example.project.wrkd.core.ui.compose.AppButton
 import org.example.project.wrkd.core.ui.compose.AppPrimaryButton
+import org.example.project.wrkd.core.ui.compose.AppPrimaryHollowButton
 import org.example.project.wrkd.core.ui.compose.AppSecondaryButton
 import org.example.project.wrkd.core.ui.compose.AppTextField
 import org.example.project.wrkd.core.ui.compose.AppTextFieldPlaceholder
-import org.example.project.wrkd.core.ui.compose.AppTextFieldTrailingText
-import org.example.project.wrkd.core.ui.compose.AppTextFieldWithTrailingContent
 import org.example.project.wrkd.core.ui.compose.AppTheme
 import org.example.project.wrkd.core.ui.compose.AppTimerButton
 import org.example.project.wrkd.core.ui.compose.ConfirmationDialog
-import org.example.project.wrkd.di.core.inject
+import org.example.project.wrkd.core.ui.compose.HorizontalButtons
 import org.example.project.wrkd.utils.TimeFormattingStringUtils
 import org.jetbrains.compose.resources.painterResource
 import wrkd.composeapp.generated.resources.Res
@@ -93,11 +76,9 @@ fun WorkoutTrackerScreen(
     val state by vm.state.collectAsStateWithLifecycle(LocalLifecycleOwner.current)
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val scaffoldState = rememberBottomSheetScaffoldState(
-        snackbarHostState = snackbarHostState,
-        bottomSheetState = rememberBottomSheetState(
-            initialValue = BottomSheetValue.Collapsed
-        )
+    val bottomSheetState = rememberModalBottomSheetState(
+        initialValue = ModalBottomSheetValue.Hidden,
+        skipHalfExpanded = true
     )
 
     LaunchedEffect(state.error) {
@@ -109,16 +90,30 @@ fun WorkoutTrackerScreen(
         }
     }
 
-    BottomSheetScaffold(
-        sheetContent = {
-            Spacer(Modifier.height(0.dp))
-        },
-        modifier = Modifier.fillMaxSize(),
-        snackbarHost = {
-            SnackbarHost(snackbarHostState)
-        },
-        sheetPeekHeight = 0.dp,
+    LaunchedEffect(state.bottomSheetType) {
+        if (state.bottomSheetType != null) {
+            bottomSheetState.show()
+        } else {
+            bottomSheetState.hide()
+        }
+    }
+
+    ModalBottomSheetLayout(
+        sheetState = bottomSheetState,
         sheetGesturesEnabled = false,
+        sheetElevation = AppTheme.dimens.small2,
+        sheetContent = {
+            when(val bsState = state.bottomSheetType) {
+                is WorkoutTrackerBottomSheetType.ExerciseDetails -> {
+                    WorkoutExerciseDetailBottomSheetContent(
+                        state = bsState,
+                        restTimer = state.restTimer,
+                        sendIntent = vm::processIntent
+                    )
+                }
+                null -> {}
+            }
+        },
         content = {
             Column(
                 modifier = Modifier
@@ -167,6 +162,357 @@ fun WorkoutTrackerScreen(
         vm.processIntent(WorkoutTrackerIntent.BackClickedIntent)
     }
 
+}
+
+@Composable
+fun WorkoutExerciseDetailBottomSheetContent(
+    state: WorkoutTrackerBottomSheetType.ExerciseDetails,
+    restTimer: Long?,
+    sendIntent: (WorkoutTrackerIntent) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = AppTheme.dimens.medium1)
+                .padding(top = AppTheme.dimens.medium1)
+        ) {
+            WorkoutExerciseDetailBottomSheetHeader(
+                backClicked = {
+                    sendIntent.invoke(WorkoutTrackerIntent.BackClickedIntent)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(AppTheme.dimens.medium1))
+
+            AppTextField(
+                value = state.name,
+                onValueEntered = {
+                    sendIntent.invoke(WorkoutTrackerIntent.EnterExerciseNameIntent(it))
+                },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words
+                ),
+                placeholder = {
+                    AppTextFieldPlaceholder("Exercise...")
+                }
+            )
+
+            Spacer(Modifier.height(AppTheme.dimens.medium1))
+
+            SetGridComponent(
+                setsList = state.sets,
+                sendIntent = sendIntent,
+                modifier = Modifier
+                    .fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(AppTheme.dimens.medium3))
+
+            AppSecondaryButton(
+                text = "Add set",
+                onClick = {
+                    sendIntent.invoke(WorkoutTrackerIntent.AddSetIntent)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(Modifier.height(AppTheme.dimens.small3))
+        }
+
+        if (restTimer == null) {
+            HorizontalButtons(
+                primaryBtnText = "Submit",
+                primaryBtnClick = { sendIntent.invoke(WorkoutTrackerIntent.SubmitExerciseIntent) },
+                primaryEnabled = state.shouldEnableSubmitBtn,
+                secondaryBtnText = "Rest",
+                secondaryBtnClick = { sendIntent.invoke(WorkoutTrackerIntent.ToggleRestTimerIntent) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = AppTheme.dimens.medium1)
+            )
+
+            Spacer(Modifier.height(AppTheme.dimens.small3))
+        } else {
+            WorkoutRestTimer(
+                duration = restTimer,
+                onStopRestClicked = {
+                    sendIntent.invoke(WorkoutTrackerIntent.ToggleRestTimerIntent)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+fun WorkoutExerciseDetailBottomSheetHeader(
+    backClicked: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Exercise details",
+            style = AppTheme.typography.h5,
+            fontWeight = FontWeight.Bold,
+            color = AppTheme.color.black87,
+            modifier = Modifier.weight(1f)
+        )
+
+        Icon(
+            painter = painterResource(Res.drawable.ic_cross_in_circle),
+            contentDescription = null,
+            modifier = Modifier
+                .size(AppTheme.dimens.medium2)
+                .clickable(
+                    interactionSource = null,
+                    indication = null,
+                    onClick = backClicked
+                )
+        )
+    }
+}
+
+@Composable
+fun SetGridComponent(
+    setsList: List<ExerciseSetInfoAppModel>,
+    sendIntent: (WorkoutTrackerIntent) -> Unit,
+    modifier: Modifier = Modifier
+) {
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+
+        SetGridHeader()
+        setsList.forEachIndexed { index, set ->
+            SetInfoComponent(
+                setNumber = index + 1,
+                set = set,
+                onRepsChange = {
+                    sendIntent.invoke(
+                        WorkoutTrackerIntent.AddRepsCountIntent(
+                            setId = set.setId,
+                            count = it
+                        )
+                    )
+                },
+                onWeightChange = {
+                    sendIntent.invoke(
+                        WorkoutTrackerIntent.WeightChangeIntent(
+                            setId = set.setId,
+                            weightEntered = it
+                        )
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                deleteSet = {
+                    sendIntent.invoke(
+                        WorkoutTrackerIntent.RemoveSetIntent(it)
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun SetGridHeader(
+    modifier: Modifier = Modifier
+) {
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = AppTheme.dimens.small3,
+                vertical = AppTheme.dimens.small3
+            ),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Set",
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = AppTheme.color.black87,
+            style = AppTheme.typography.subtitle1,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(Modifier.width(AppTheme.dimens.small3))
+
+        Text(
+            text = "Reps",
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = AppTheme.color.black87,
+            style = AppTheme.typography.subtitle1,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(Modifier.width(AppTheme.dimens.small3))
+
+        Text(
+            text = "Weight (kgs)",
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = AppTheme.color.black87,
+            style = AppTheme.typography.subtitle1,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+
+}
+
+@Composable
+fun SetInfoComponent(
+    setNumber: Int,
+    set: ExerciseSetInfoAppModel,
+    onRepsChange: (Int) -> Unit,
+    onWeightChange: (Double) -> Unit,
+    deleteSet: (setId: String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .padding(vertical = AppTheme.dimens.small2),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AppTextField(
+            value = "Set $setNumber",
+            onValueEntered = {},
+            readOnly = true,
+            modifier = Modifier.weight(1f)
+        )
+
+        Spacer(Modifier.width(AppTheme.dimens.small3))
+
+        AppTextField(
+            value = set.repsCount.toString(),
+            onValueEntered = {
+                it.toIntOrNull()?.let(onRepsChange)
+            },
+            textChangeFilter = {
+                it.filter { char -> char.isDigit() }
+            },
+            modifier = Modifier.weight(1f),
+            keyboardOptions = KeyboardOptions.Default.copy(
+                keyboardType = KeyboardType.Number
+            )
+        )
+
+        Spacer(Modifier.width(AppTheme.dimens.small3))
+
+        AppTextField(
+            value = set.additionalWeight.displayString(),
+            onValueEntered = {
+                it.toDoubleOrNull()?.let(onWeightChange)
+            },
+            textChangeFilter = {
+                it.filter { char -> (char.isDigit() || char == '.') }
+            },
+            modifier = Modifier.weight(1f),
+            keyboardOptions = KeyboardOptions.Default.copy(
+                keyboardType = KeyboardType.Number
+            ),
+            placeholder = {
+                AppTextFieldPlaceholder(text = "0")
+            }
+        )
+
+        Spacer(Modifier.width(AppTheme.dimens.small3))
+
+        Icon(
+            painter = painterResource(Res.drawable.ic_cross_in_circle),
+            contentDescription = null,
+            modifier = Modifier
+                .size(AppTheme.dimens.medium2)
+                .clickable(
+                    interactionSource = null,
+                    indication = null,
+                    onClick = { deleteSet.invoke(set.setId) }
+                ),
+            tint = AppTheme.color.primaryRed
+        )
+    }
+}
+
+fun LazyGridScope.setsInfoContent(
+    setNumber: Int,
+    set: ExerciseSetInfoAppModel,
+    onRepsChange: (Int) -> Unit,
+    onWeightChange: (Double) -> Unit,
+) {
+    item {
+        AppTextField(
+            value = "Set $setNumber",
+            onValueEntered = {},
+            readOnly = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+
+    item {
+        AppTextField(
+            value = set.repsCount.toString(),
+            onValueEntered = {
+                it.toIntOrNull()?.let(onRepsChange)
+            },
+            textChangeFilter = {
+                it.filter { char -> char.isDigit() }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions.Default.copy(
+                keyboardType = KeyboardType.Number
+            )
+        )
+    }
+
+    item {
+        AppTextField(
+            value = set.additionalWeight.displayString(),
+            onValueEntered = {
+                it.toDoubleOrNull()?.let(onWeightChange)
+            },
+            textChangeFilter = {
+                it.filter { char -> char.isDigit() }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions.Default.copy(
+                keyboardType = KeyboardType.Number
+            )
+        )
+    }
+}
+
+fun LazyGridScope.setsInfoHeader() {
+    val headerItems = listOf("Sets", "Reps", "Weight (kg)")
+
+    items(headerItems) {
+        Text(
+            text = it,
+            style = AppTheme.typography.subtitle1,
+            color = AppTheme.color.black87,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
 
 @Composable
@@ -386,47 +732,13 @@ fun WorkTrackingScreen(
         ) {
             itemsIndexed(exercises) { index, item ->
                 Column {
-                    WorkoutCard(
+                    ExerciseCard(
                         exercise = item,
-                        onExerciseNameChange = { name ->
-                            sendIntent.invoke(
-                                WorkoutTrackerIntent.EnterExerciseNameIntent(
-                                    exerciseId = item.exerciseId,
-                                    name = name
-                                )
-                            )
+                        editClicked = {
+                            sendIntent.invoke(WorkoutTrackerIntent.EditExerciseIntent(item.exerciseId))
                         },
-                        repsCountChange = { setId, repsCount ->
-                            sendIntent.invoke(
-                                WorkoutTrackerIntent.AddRepsCountIntent(
-                                    exerciseId = item.exerciseId,
-                                    setId = setId,
-                                    count = repsCount
-                                )
-                            )
-                        },
-                        resistanceMethodChange = { setId, method ->
-                            sendIntent.invoke(
-                                WorkoutTrackerIntent.ChangeResistanceMethodIntent(
-                                    exerciseId = item.exerciseId,
-                                    setId = setId,
-                                    resistanceMethod = method
-                                )
-                            )
-                        },
-                        additionalWeightChange = { setId, weight ->
-                            sendIntent.invoke(
-                                WorkoutTrackerIntent.WeightChangeIntent(
-                                    exerciseId = item.exerciseId,
-                                    setId = setId,
-                                    weightEntered = weight
-                                )
-                            )
-                        },
-                        addSet = {
-                            sendIntent.invoke(
-                                WorkoutTrackerIntent.AddSetIntent(item.exerciseId)
-                            )
+                        deleteClicked = {
+                            sendIntent.invoke(WorkoutTrackerIntent.DeleteExerciseIntent(item.exerciseId))
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -533,14 +845,9 @@ fun AddExerciseItem(
             .fillMaxWidth()
     ) {
         if (isAddExerciseAllowed) {
-            AppButton(
+            AppPrimaryHollowButton(
                 text = "Add Exercise",
                 onClick = onAddClicked,
-                enabled = true,
-                colors = ButtonDefaults.buttonColors(
-                    backgroundColor = AppTheme.color.primaryLightBlue
-                ),
-                textColor = AppTheme.color.white,
                 modifier = Modifier.fillMaxWidth()
             )
         } else {
@@ -563,34 +870,18 @@ fun WorkoutTrackingActionButtons(
     completeClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    HorizontalButtons(
+        primaryBtnText = "Complete",
+        primaryBtnClick = completeClicked,
+        secondaryBtnText = "Rest",
+        secondaryBtnClick = restClicked,
         modifier = modifier
             .fillMaxWidth()
             .padding(
                 horizontal = AppTheme.dimens.medium1,
                 vertical = AppTheme.dimens.medium1
-            ),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AppTimerButton(
-            text = "Rest",
-            onClick = restClicked,
-            modifier = Modifier.weight(1f)
-        )
-
-        Spacer(Modifier.width(AppTheme.dimens.medium1))
-
-        AppButton(
-            text = "Finish",
-            onClick = completeClicked,
-            enabled = true,
-            colors = ButtonDefaults.buttonColors(
-                backgroundColor = AppTheme.color.primaryDarkBlue
-            ),
-            textColor = AppTheme.color.white,
-            modifier = Modifier.weight(1f)
-        )
-    }
+            )
+    )
 }
 
 @Composable
@@ -616,13 +907,10 @@ fun EmptyWorkoutScreen(
 }
 
 @Composable
-fun WorkoutCard(
+fun ExerciseCard(
     exercise: ExercisePlanInfoAppModel,
-    onExerciseNameChange: (String) -> Unit,
-    repsCountChange: (String, Int) -> Unit,
-    resistanceMethodChange: (String, ExerciseResistanceMethod) -> Unit,
-    additionalWeightChange: (String, Double) -> Unit,
-    addSet: () -> Unit,
+    editClicked: () -> Unit,
+    deleteClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -634,30 +922,26 @@ fun WorkoutCard(
                 .fillMaxWidth()
                 .padding(all = AppTheme.dimens.medium1)
         ) {
-            AppTextField(
-                value = exercise.name,
-                onValueEntered = onExerciseNameChange,
+            Text(
+                text = exercise.name,
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Words
-                ),
-                placeholder = {
-                    AppTextFieldPlaceholder("Exercise...")
-                }
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = AppTheme.typography.h6,
+                fontWeight = FontWeight.Bold,
+                color = AppTheme.color.black
             )
+            Spacer(Modifier.height(AppTheme.dimens.medium1))
+
+            SetsList(sets = exercise.sets)
 
             Spacer(Modifier.height(AppTheme.dimens.medium1))
 
-            SetsList(
-                sets = exercise.sets,
-                onRepCountChange = repsCountChange,
-                onResistanceMethodChange = resistanceMethodChange,
-                additionalWeightChange = additionalWeightChange
-            )
-
-            AppSecondaryButton(
-                text = "Add Set ➕",
-                onClick = addSet,
+            HorizontalButtons(
+                primaryBtnText = "Edit",
+                primaryBtnClick = editClicked,
+                secondaryBtnText = "Delete",
+                secondaryBtnClick = deleteClicked,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -665,261 +949,45 @@ fun WorkoutCard(
 }
 
 @Composable
-fun ColumnScope.SetsList(
+fun SetsList(
     sets: List<ExerciseSetInfoAppModel>,
-    onRepCountChange: (String, Int) -> Unit,
-    onResistanceMethodChange: (String, ExerciseResistanceMethod) -> Unit,
-    additionalWeightChange: (String, Double) -> Unit,
-) {
-    sets.forEachIndexed { index, set ->
-        SetCard(
-            setNumber = index + 1,
-            set = set,
-            isLastSet = index == sets.lastIndex,
-            onRepCountChange = {
-                onRepCountChange.invoke(set.setId, it)
-            },
-            onResistanceMethodChange = {
-                onResistanceMethodChange.invoke(set.setId, it)
-            },
-            additionalWeightChange = {
-                additionalWeightChange.invoke(set.setId, it)
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-}
-
-@Composable
-fun SetCard(
-    setNumber: Int,
-    set: ExerciseSetInfoAppModel,
-    isLastSet: Boolean,
-    onRepCountChange: (Int) -> Unit,
-    onResistanceMethodChange: (ExerciseResistanceMethod) -> Unit,
-    additionalWeightChange: (Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .animateContentSize()
-            .padding(
-                horizontal = AppTheme.dimens.small3
-            )
-    ) {
+    sets.forEachIndexed { index, set ->
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = modifier
+                .padding(vertical = AppTheme.dimens.small1),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = "Set $setNumber",
-                style = AppTheme.typography.subtitle1,
-                color = AppTheme.color.black,
-                fontWeight = FontWeight.Bold
-            )
+            val style = AppTheme.typography.subtitle1
+            val color = AppTheme.color.black87
 
             Text(
-                text = "x",
-                style = AppTheme.typography.subtitle1,
-                color = AppTheme.color.black,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .padding(horizontal = AppTheme.dimens.medium2)
+                text = "Set ${index + 1}",
+                style = style,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = color,
+                modifier = Modifier.weight(1f)
             )
 
-            SetRepsCountInput(
-                repCount = set.repsCount,
-                isExpanded = isExpanded,
-                onRepCountChange = onRepCountChange,
-                onExpandClicked = {
-                    isExpanded = !isExpanded
-                }
-            )
-        }
-
-        if (isExpanded) {
-            Spacer(Modifier.height(AppTheme.dimens.medium1))
-
-            ExerciseResistanceMethodOption(
-                resistanceMethodOptions = ExerciseResistanceMethod.entries,
-                selectedResistanceMethod = set.resistanceMethod,
-                additionalWeight = set.additionalWeight,
-                onSelection = onResistanceMethodChange,
-                onAdditionalWeightChange = additionalWeightChange,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        if (!isLastSet) {
-            Spacer(Modifier.height(AppTheme.dimens.small3))
-
-            Divider(
-                modifier = Modifier.fillMaxWidth(),
-                color = AppTheme.color.lightGrey,
-                thickness = AppTheme.dimens.small1
-            )
-        }
-
-        Spacer(Modifier.height(AppTheme.dimens.small3))
-    }
-}
-
-@Composable
-fun ExerciseResistanceMethodOption(
-    resistanceMethodOptions: List<ExerciseResistanceMethod>,
-    selectedResistanceMethod: ExerciseResistanceMethod,
-    additionalWeight: WeightInGrams,
-    onSelection: (ExerciseResistanceMethod) -> Unit,
-    onAdditionalWeightChange: (Double) -> Unit,
-    modifier: Modifier = Modifier
-) {
-
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Bottom
-    ) {
-        resistanceMethodOptions.forEachIndexed { index, method ->
-            val isSelected = method == selectedResistanceMethod
-
-            ResistanceMethodOption(
-                option = method,
-                isSelected = isSelected,
-                onClick = {
-                    onSelection.invoke(method)
-                },
-                modifier = Modifier
-                    .padding(
-                        start = if (index != 0) AppTheme.dimens.small2 else 0.dp,
-                        end = if (index != resistanceMethodOptions.lastIndex) AppTheme.dimens.small2 else 0.dp
-                    )
-                    .weight(1f)
-            )
-        }
-    }
-
-    Spacer(Modifier.height(AppTheme.dimens.medium1))
-
-    AppTextFieldWithTrailingContent(
-        value = additionalWeight.displayString(),
-        textChangeFilter = {
-            it.filter { char -> char.isDigit() || char == '.' }
-        },
-        trailingContent = {
-            AppTextFieldTrailingText(
-                text = "Kgs"
-            )
-        },
-        onValueEntered = {
-            val weight = it.toDoubleOrNull() ?: return@AppTextFieldWithTrailingContent
-            onAdditionalWeightChange.invoke(weight)
-        },
-        placeholder = {
-            AppTextFieldPlaceholder("Additional weight \uD83D\uDCAA")
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-    )
-}
-
-@Composable
-fun ResistanceMethodOption(
-    option: ExerciseResistanceMethod,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val shape = remember { RoundedCornerShape(AppTheme.corners.selectable) }
-    Row(
-        modifier = modifier
-            .background(
-                color = if (isSelected) AppTheme.color.primaryLightBlue else Color.Transparent,
-                shape = shape
-            )
-            .clip(shape)
-            .run {
-                if (isSelected) {
-                    this
-                } else {
-                    border(
-                        width = AppTheme.dimens.small1,
-                        color = AppTheme.color.primaryLightBlue,
-                        shape = shape
-                    )
-                }
+            val weight = set.additionalWeight.displayString()
+            val repsAndWeight = if (weight.isNotEmpty()) {
+                "x ${set.repsCount} reps - $weight kgs"
+            } else {
+                "x ${set.repsCount} reps"
             }
-            .clickable(onClick = onClick)
-            .padding(
-                horizontal = AppTheme.dimens.small4,
-                vertical = AppTheme.dimens.small3
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = option.resistanceMethodName,
-            color = if (isSelected) AppTheme.color.white else AppTheme.color.primaryLightBlue,
-            maxLines = 1,
-            textAlign = TextAlign.Center,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier,
-            style = AppTheme.typography.subtitle1,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
 
-@Composable
-fun SetRepsCountInput(
-    repCount: Int,
-    isExpanded: Boolean,
-    onRepCountChange: (Int) -> Unit,
-    onExpandClicked: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val rotationDegrees by animateFloatAsState(
-        targetValue = if (isExpanded) 180f else 0f
-    )
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AppTextFieldWithTrailingContent(
-            value = repCount.toString(),
-            trailingContent = {
-                AppTextFieldTrailingText(
-                    text = "Reps"
-                )
-            },
-            onValueEntered = {
-                val reps = it.toIntOrNull() ?: return@AppTextFieldWithTrailingContent
-                onRepCountChange.invoke(reps)
-            },
-            keyboardOptions = KeyboardOptions.Default.copy(
-                keyboardType = KeyboardType.Number
-            ),
-            textChangeFilter = {
-                it.filter { char -> char.isDigit() }
-            },
-            modifier = Modifier.weight(1f)
-        )
-
-        IconButton(
-            onClick = onExpandClicked,
-            modifier = Modifier.padding(AppTheme.dimens.small3),
-            content = {
-                Icon(
-                    painter = painterResource(Res.drawable.ic_drop_down),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(AppTheme.dimens.medium1)
-                        .rotate(rotationDegrees)
-                )
-            }
-        )
+            Text(
+                text = repsAndWeight,
+                style = style,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = color,
+                modifier = Modifier
+            )
+        }
     }
 }
 

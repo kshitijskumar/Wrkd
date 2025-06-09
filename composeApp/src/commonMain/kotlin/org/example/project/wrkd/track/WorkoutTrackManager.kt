@@ -3,6 +3,7 @@ package org.example.project.wrkd.track
 import kotlinx.coroutines.flow.StateFlow
 import org.example.project.wrkd.core.models.app.ExercisePlanInfoAppModel
 import org.example.project.wrkd.core.models.app.ExerciseResistanceMethod
+import org.example.project.wrkd.core.models.app.ExerciseSetInfoAppModel
 
 interface WorkoutTrackManager {
 
@@ -13,6 +14,12 @@ interface WorkoutTrackManager {
     fun addExercise(name: String)
 
     fun addExercises(list: List<String>)
+
+    fun addExercise(
+        exerciseId: String?,
+        exerciseName: String,
+        sets: List<ExerciseSetInfoAppModel>
+    )
 
     fun changeExerciseName(id: String, nameEntered: String)
 

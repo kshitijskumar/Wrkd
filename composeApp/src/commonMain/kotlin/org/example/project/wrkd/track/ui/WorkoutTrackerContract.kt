@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import org.example.project.wrkd.core.models.app.ExercisePlanInfoAppModel
 import org.example.project.wrkd.core.models.app.ExerciseResistanceMethod
 import org.example.project.wrkd.core.models.WeekDay
+import org.example.project.wrkd.core.models.app.ExerciseSetInfoAppModel
 import org.example.project.wrkd.core.navigation.args.WorkoutTrackingArgs
 import org.example.project.wrkd.utils.System
 
@@ -16,7 +17,8 @@ data class WorkoutTrackerState(
     val error: String? = null,
     val dialogType: WorkoutTrackerDialogTypes? = null,
     val screenState: WorkoutTrackerScreenState? = null,
-    val previousExercisesName: List<String>? = null
+    val previousExercisesName: List<String>? = null,
+    val bottomSheetType: WorkoutTrackerBottomSheetType? = null
 )
 
 @Immutable
@@ -58,16 +60,12 @@ sealed class WorkoutTrackerIntent {
     data object AddExerciseIntent : WorkoutTrackerIntent()
 
     data class EnterExerciseNameIntent(
-        val exerciseId: String,
         val name: String
     ) : WorkoutTrackerIntent()
 
-    data class AddSetIntent(
-        val exerciseId: String
-    ) : WorkoutTrackerIntent()
+    data object AddSetIntent : WorkoutTrackerIntent()
 
     data class AddRepsCountIntent(
-        val exerciseId: String,
         val setId: String,
         val count: Int
     ) : WorkoutTrackerIntent()
@@ -85,7 +83,6 @@ sealed class WorkoutTrackerIntent {
     data class WorkoutDayNameEnteredIntent(val name: String) : WorkoutTrackerIntent()
 
     data class WeightChangeIntent(
-        val exerciseId: String,
         val setId: String,
         val weightEntered: Double
     ) : WorkoutTrackerIntent()
@@ -93,5 +90,31 @@ sealed class WorkoutTrackerIntent {
     data object DismissDialogIntent : WorkoutTrackerIntent()
 
     data object BackClickedIntent : WorkoutTrackerIntent()
+
+    data object SubmitExerciseIntent : WorkoutTrackerIntent()
+
+    data class RemoveSetIntent(val setId: String) : WorkoutTrackerIntent()
+
+    data class EditExerciseIntent(val exerciseId: String) : WorkoutTrackerIntent()
+
+    data class DeleteExerciseIntent(val exerciseId: String) : WorkoutTrackerIntent()
+
+}
+
+sealed class WorkoutTrackerBottomSheetType {
+
+    /**
+     * @param exerciseId Pass null if adding new exercise, otherwise pass the exercise id for editing
+     */
+    data class ExerciseDetails(
+        val exerciseId: String?,
+        val name: String,
+        val sets: List<ExerciseSetInfoAppModel>
+    ): WorkoutTrackerBottomSheetType() {
+        val shouldEnableSubmitBtn: Boolean
+            get() {
+                return name.isNotEmpty() && sets.isNotEmpty()
+            }
+    }
 
 }

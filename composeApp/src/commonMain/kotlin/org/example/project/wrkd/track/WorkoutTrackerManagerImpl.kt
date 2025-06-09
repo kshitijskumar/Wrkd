@@ -37,6 +37,49 @@ class WorkoutTrackerManagerImpl : WorkoutTrackManager {
         _state.update { it + exerciseList }
     }
 
+    override fun addExercise(
+        exerciseId: String?,
+        exerciseName: String,
+        sets: List<ExerciseSetInfoAppModel>
+    ) {
+        _state.update { currentList ->
+            var isPresentInCurrentList = false
+            val updatedList = if (exerciseId != null) {
+                currentList.updateForGivenExerciseId(
+                    id = exerciseId,
+                    update = {
+                        isPresentInCurrentList = true
+                        it.copy(
+                            name = exerciseName,
+                            sets = sets
+                        )
+                    }
+                )
+            } else {
+                currentList
+            }
+
+            if (isPresentInCurrentList) {
+                updatedList
+            } else {
+                currentList + ExercisePlanInfoAppModel(name = exerciseName, exerciseId = KUUID.generateId(), sets = sets)
+            }
+        }
+    }
+
+    private fun List<ExercisePlanInfoAppModel>.updateForGivenExerciseId(
+        id: String,
+        update: (ExercisePlanInfoAppModel) -> ExercisePlanInfoAppModel
+    ) : List<ExercisePlanInfoAppModel> {
+        return this.map {
+            if (it.exerciseId == id) {
+                update.invoke(it)
+            } else {
+                it
+            }
+        }
+    }
+
     override fun changeExerciseName(id: String, nameEntered: String) {
         _state.update {  currentList ->
             currentList.map {

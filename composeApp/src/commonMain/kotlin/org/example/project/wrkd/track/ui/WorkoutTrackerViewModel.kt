@@ -8,6 +8,8 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.example.project.wrkd.core.models.WeekDay
 import org.example.project.wrkd.core.models.app.ExercisePlanInfoAppModel
+import org.example.project.wrkd.core.models.app.ExerciseSetInfoAppModel
+import org.example.project.wrkd.core.models.app.WeightInGrams
 import org.example.project.wrkd.core.models.app.isValid
 import org.example.project.wrkd.core.models.dayName
 import org.example.project.wrkd.core.navigation.AppNavigator
@@ -41,7 +43,6 @@ class WorkoutTrackerViewModel(
     }
 
     override fun processIntent(intent: WorkoutTrackerIntent) {
-        println("WorkoutTrackerViewModel: processIntent: $intent")
         when (intent) {
             is WorkoutTrackerIntent.InitializationIntent -> handleInitializationIntent(intent)
             is WorkoutTrackerIntent.AddExerciseIntent -> handleAddExerciseIntent(intent)
@@ -57,6 +58,10 @@ class WorkoutTrackerViewModel(
             is WorkoutTrackerIntent.ExerciseClickedInStartScreen -> handleExerciseClickedInStartScreen(intent)
             WorkoutTrackerIntent.StartWorkoutIntent -> handleStartWorkoutIntent()
             WorkoutTrackerIntent.BackClickedIntent -> handleBackClickedIntent()
+            WorkoutTrackerIntent.SubmitExerciseIntent -> handleSubmitExerciseIntent()
+            is WorkoutTrackerIntent.RemoveSetIntent -> handleRemoveSetIntent(intent)
+            is WorkoutTrackerIntent.DeleteExerciseIntent -> handleDeleteExerciseIntent(intent)
+            is WorkoutTrackerIntent.EditExerciseIntent -> handleEditExerciseIntent(intent)
         }
     }
 
@@ -123,7 +128,15 @@ class WorkoutTrackerViewModel(
             return // shouldn't happen
         }
 
-        workoutTrackManager.addExercise()
+        updateState {
+            it.copy(
+                bottomSheetType = WorkoutTrackerBottomSheetType.ExerciseDetails(
+                    exerciseId = null,
+                    name = "",
+                    sets = listOf(ExerciseSetInfoAppModel.defaultSet())
+                )
+            )
+        }
     }
 
     fun isExerciseAdditionAllowed(): Boolean {
@@ -142,16 +155,38 @@ class WorkoutTrackerViewModel(
                 )
             }
         } else {
-            workoutTrackManager.enterRepsCount(
-                exerciseId = intent.exerciseId,
-                setId = intent.setId,
-                repCount = intent.count
-            )
+            val exerciseDetails = currentExerciseDetails() ?: return
+            updateState {
+                it.copy(
+                    bottomSheetType = exerciseDetails.copy(
+                        sets = exerciseDetails.sets.map { set ->
+                            if (set.setId == intent.setId) {
+                                set.copy(repsCount = intent.count)
+                            } else {
+                                set
+                            }
+                        }
+                    )
+                )
+            }
         }
     }
 
     private fun handleAddSetIntent(intent: WorkoutTrackerIntent.AddSetIntent) {
-        workoutTrackManager.addSet(intent.exerciseId)
+        updateState {
+            val updatedBsState = when(val bsState = it.bottomSheetType) {
+                is WorkoutTrackerBottomSheetType.ExerciseDetails -> {
+                    bsState.copy(
+                        sets = bsState.sets + ExerciseSetInfoAppModel.defaultSet()
+                    )
+                }
+                null -> bsState
+            }
+
+            it.copy(
+                bottomSheetType = updatedBsState
+            )
+        }
     }
 
     private fun handleChangeResistanceMethodIntent(intent: WorkoutTrackerIntent.ChangeResistanceMethodIntent) {
@@ -164,10 +199,14 @@ class WorkoutTrackerViewModel(
 
     private fun handleEnterExerciseNameIntent(intent: WorkoutTrackerIntent.EnterExerciseNameIntent) {
         // TODO::KSHITIJ - add auto suggestion kind of feature for exercise name
-        workoutTrackManager.changeExerciseName(
-            id = intent.exerciseId,
-            nameEntered = intent.name
-        )
+        val exerciseDetails = currentExerciseDetails() ?: return
+        updateState {
+            it.copy(
+                bottomSheetType = exerciseDetails.copy(
+                    name = intent.name
+                )
+            )
+        }
     }
 
     private fun handleToggleRestTimerIntent(intent: WorkoutTrackerIntent.ToggleRestTimerIntent) {
@@ -254,11 +293,20 @@ class WorkoutTrackerViewModel(
     }
 
     private fun handleWorkoutWeightChangeIntent(intent: WorkoutTrackerIntent.WeightChangeIntent) {
-        workoutTrackManager.addAdditionalWeight(
-            exerciseId = intent.exerciseId,
-            setId = intent.setId,
-            additionalWeight = intent.weightEntered
-        )
+        val exerciseDetails = currentExerciseDetails() ?: return
+        updateState {
+            it.copy(
+                bottomSheetType = exerciseDetails.copy(
+                    sets = exerciseDetails.sets.map { set ->
+                        if (set.setId == intent.setId) {
+                            set.copy(additionalWeight = WeightInGrams.fromKg(intent.weightEntered))
+                        } else {
+                            set
+                        }
+                    }
+                )
+            )
+        }
     }
 
     private fun handleDismissDialogIntent() {
@@ -310,17 +358,85 @@ class WorkoutTrackerViewModel(
                 screenState = WorkoutTrackerScreenState.TrackerScreen()
             )
         }
-        workoutTrackManager.addExercises(exercisesSelected.map { it.exerciseName })
+        val exerciseNamesList = exercisesSelected.map { it.exerciseName }
+        if (exerciseNamesList.isNotEmpty()) {
+            workoutTrackManager.addExercises(exerciseNamesList)
+        } else {
+            workoutTrackManager.addExercise()
+        }
         startCollectingWorkoutTrackManager()
     }
 
     private fun handleBackClickedIntent() {
+        if (currentState.bottomSheetType != null) {
+            updateState {
+                it.copy(
+                    bottomSheetType = null
+                )
+            }
+            return
+        }
         when(currentState.screenState) {
-            is WorkoutTrackerScreenState.TrackerScreen -> TODO()
+            is WorkoutTrackerScreenState.TrackerScreen ->  {} //TODO()
             is WorkoutTrackerScreenState.StartScreen,
             null -> {
                 appNavigator.goBack()
             }
+        }
+    }
+
+    private fun handleSubmitExerciseIntent() {
+        val exerciseDetails = currentExerciseDetails() ?: return
+
+        workoutTrackManager.addExercise(
+            exerciseId = exerciseDetails.exerciseId,
+            exerciseName = exerciseDetails.name,
+            sets = exerciseDetails.sets
+        )
+
+        updateState {
+            it.copy(
+                bottomSheetType = null
+            )
+        }
+    }
+
+    private fun handleRemoveSetIntent(intent: WorkoutTrackerIntent.RemoveSetIntent) {
+        val exerciseDetails = currentExerciseDetails() ?: return
+
+        updateState {
+            it.copy(
+                bottomSheetType = exerciseDetails.copy(
+                    sets = exerciseDetails.sets.filter { it.setId != intent.setId }
+                )
+            )
+        }
+    }
+
+    private fun handleDeleteExerciseIntent(intent: WorkoutTrackerIntent.DeleteExerciseIntent) {
+        workoutTrackManager.deleteExercise(intent.exerciseId)
+    }
+
+    private fun handleEditExerciseIntent(intent: WorkoutTrackerIntent.EditExerciseIntent) {
+        val exerciseToEdit = workoutTrackManager.state.value.find {
+            it.exerciseId == intent.exerciseId
+        } ?: return // for edit, exercise should be present in tracker manager else return
+
+        updateState {
+            it.copy(
+                bottomSheetType = WorkoutTrackerBottomSheetType.ExerciseDetails(
+                    exerciseId = exerciseToEdit.exerciseId,
+                    name = exerciseToEdit.name,
+                    sets = exerciseToEdit.sets
+                )
+            )
+        }
+    }
+
+    private fun currentExerciseDetails(): WorkoutTrackerBottomSheetType.ExerciseDetails? {
+        return when(val bsType = currentState.bottomSheetType) {
+            is WorkoutTrackerBottomSheetType.ExerciseDetails -> bsType
+            null -> return null
         }
     }
 
