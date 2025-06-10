@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
 import androidx.compose.material.Icon
+import androidx.compose.material.IconButton
 import androidx.compose.material.ModalBottomSheetLayout
 import androidx.compose.material.ModalBottomSheetValue
 import androidx.compose.material.SnackbarHostState
@@ -53,6 +54,7 @@ import org.example.project.wrkd.core.models.app.ExerciseSetInfoAppModel
 import org.example.project.wrkd.core.models.app.displayString
 import org.example.project.wrkd.core.models.dayName
 import org.example.project.wrkd.core.ui.compose.AppButton
+import org.example.project.wrkd.core.ui.compose.AppHeaderTextField
 import org.example.project.wrkd.core.ui.compose.AppPrimaryButton
 import org.example.project.wrkd.core.ui.compose.AppPrimaryHollowButton
 import org.example.project.wrkd.core.ui.compose.AppSecondaryButton
@@ -134,6 +136,8 @@ fun WorkoutTrackerScreen(
                             exercises == null -> {}
                             else -> {
                                 WorkTrackingScreen(
+                                    workoutName = screenState.workoutDayName,
+                                    workoutPlaceholderName = screenState.workoutDayNamePlaceholder,
                                     exercises = exercises,
                                     isExerciseAdditionAllowed = screenState.isExerciseAdditionAllowed,
                                     restTimer = state.restTimer,
@@ -427,7 +431,7 @@ fun SetInfoComponent(
             },
             modifier = Modifier.weight(1f),
             keyboardOptions = KeyboardOptions.Default.copy(
-                keyboardType = KeyboardType.Number
+                keyboardType = KeyboardType.Decimal
             ),
             placeholder = {
                 AppTextFieldPlaceholder(text = "0")
@@ -715,6 +719,8 @@ fun WorkoutTrackerDialogHandling(
 
 @Composable
 fun WorkTrackingScreen(
+    workoutName: String,
+    workoutPlaceholderName: String,
     exercises: List<ExercisePlanInfoAppModel>,
     isExerciseAdditionAllowed: Boolean,
     restTimer: Long?,
@@ -725,46 +731,29 @@ fun WorkTrackingScreen(
     Column(
         modifier = modifier
     ) {
-        LazyColumn(
+        WorkoutTrackingScreenToolbar(
+            workoutName = workoutName,
+            workoutPlaceholderName = workoutPlaceholderName,
+            workoutDayNameEntered = {
+                sendIntent.invoke(WorkoutTrackerIntent.WorkoutDayNameEnteredIntent(it))
+            },
+            backClicked = {
+                sendIntent.invoke(WorkoutTrackerIntent.BackClickedIntent)
+            },
+            modifier = Modifier.padding(
+                top = AppTheme.dimens.small3,
+                bottom = AppTheme.dimens.medium1
+            )
+        )
+
+        WorkoutExercisesList(
+            exercises = exercises,
+            isExerciseAdditionAllowed = isExerciseAdditionAllowed,
+            sendIntent = sendIntent,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-        ) {
-            itemsIndexed(exercises) { index, item ->
-                Column {
-                    ExerciseCard(
-                        exercise = item,
-                        editClicked = {
-                            sendIntent.invoke(WorkoutTrackerIntent.EditExerciseIntent(item.exerciseId))
-                        },
-                        deleteClicked = {
-                            sendIntent.invoke(WorkoutTrackerIntent.DeleteExerciseIntent(item.exerciseId))
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = AppTheme.dimens.medium1)
-                    )
-
-                    if (index != exercises.lastIndex) {
-                        Spacer(Modifier.height(AppTheme.dimens.medium1))
-                    }
-                }
-            }
-
-            item {
-                AddExerciseItem(
-                    isAddExerciseAllowed = isExerciseAdditionAllowed,
-                    onAddClicked = {
-                        sendIntent.invoke(WorkoutTrackerIntent.AddExerciseIntent)
-                    },
-                    modifier = Modifier
-                        .padding(
-                            horizontal = AppTheme.dimens.medium1,
-                            vertical = AppTheme.dimens.medium2
-                        )
-                )
-            }
-        }
+        )
 
         if (restTimer != null) {
             WorkoutRestTimer(
@@ -783,6 +772,96 @@ fun WorkTrackingScreen(
                     sendIntent.invoke(WorkoutTrackerIntent.CompleteWorkoutIntent(false))
                 },
                 modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+fun WorkoutTrackingScreenToolbar(
+    workoutName: String,
+    workoutPlaceholderName: String,
+    workoutDayNameEntered: (String) -> Unit,
+    backClicked: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(
+            onClick = backClicked
+        ) {
+            Icon(
+                painter = painterResource(Res.drawable.ic_back),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(AppTheme.dimens.medium2)
+            )
+        }
+
+        AppHeaderTextField(
+            value = workoutName,
+            onValueEntered = workoutDayNameEntered,
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = AppTheme.dimens.small2),
+            placeholder = {
+                AppTextFieldPlaceholder(
+                    text = workoutPlaceholderName.ifEmpty { "Workout" },
+                    style = AppTheme.typography.h5.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Words
+            ),
+            maxLines = 3
+        )
+    }
+}
+
+@Composable
+fun WorkoutExercisesList(
+    exercises: List<ExercisePlanInfoAppModel>,
+    isExerciseAdditionAllowed: Boolean,
+    sendIntent: (WorkoutTrackerIntent) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier
+    ) {
+        itemsIndexed(exercises) { index, item ->
+            Column {
+                ExerciseCard(
+                    exercise = item,
+                    editClicked = {
+                        sendIntent.invoke(WorkoutTrackerIntent.EditExerciseIntent(item.exerciseId))
+                    },
+                    deleteClicked = {
+                        sendIntent.invoke(WorkoutTrackerIntent.DeleteExerciseIntent(item.exerciseId))
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = AppTheme.dimens.medium1)
+                )
+
+                if (index != exercises.lastIndex) {
+                    Spacer(Modifier.height(AppTheme.dimens.medium1))
+                }
+            }
+        }
+
+        item {
+            AddExerciseItem(
+                isAddExerciseAllowed = isExerciseAdditionAllowed,
+                onAddClicked = {
+                    sendIntent.invoke(WorkoutTrackerIntent.AddExerciseIntent)
+                },
+                modifier = Modifier
+                    .padding(
+                        horizontal = AppTheme.dimens.medium1,
+                        vertical = AppTheme.dimens.medium2
+                    )
             )
         }
     }

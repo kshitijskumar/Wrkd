@@ -84,11 +84,7 @@ class WorkoutTrackerViewModel(
         updateState {
             it.copy(
                 week = week,
-                date = currentDate,
-                workoutDayName = defaultWorkoutDayName(
-                    weekDay = week,
-                    startTime = currentDate
-                )
+                date = currentDate
             )
         }
     }
@@ -106,10 +102,6 @@ class WorkoutTrackerViewModel(
             currentState.copy(
                 week = week,
                 date = currentDate,
-                workoutDayName = defaultWorkoutDayName(
-                    weekDay = week,
-                    startTime = currentDate
-                ),
                 screenState = WorkoutTrackerScreenState.StartScreen(
                     previousExercises = previousExercises.map {
                         PreviousExerciseSelection(
@@ -275,7 +267,7 @@ class WorkoutTrackerViewModel(
                 val currentTime = System.currentTimeInMillis
                 saveWorkoutUseCase.invoke(
                     weekDay = weekDay,
-                    dayName = currentState.workoutDayName.ifEmpty { defaultWorkoutDayName(weekDay, startedAt) },
+                    dayName = screenState.workoutDayName.ifEmpty { defaultWorkoutDayName(weekDay, startedAt) },
                     startedAt = startedAt,
                     duration = currentTime - startedAt,
                     exercises = exercisesList
@@ -285,9 +277,16 @@ class WorkoutTrackerViewModel(
     }
 
     private fun handleWorkoutDayNameEnteredIntent(intent: WorkoutTrackerIntent.WorkoutDayNameEnteredIntent) {
+        val screenState = when(val scState = currentState.screenState) {
+            is WorkoutTrackerScreenState.TrackerScreen -> scState
+            is WorkoutTrackerScreenState.StartScreen,
+            null -> return
+        }
         updateState {
             it.copy(
-                workoutDayName = intent.name
+                screenState = screenState.copy(
+                    workoutDayName = intent.name
+                )
             )
         }
     }
@@ -352,19 +351,28 @@ class WorkoutTrackerViewModel(
             null -> return
         }
 
+        val startTime = System.currentTimeInMillis
+
+        val defaultDayName = defaultWorkoutDayName(
+            weekDay = currentState.week ?: WeekDay.Mon, // shoudnt be null at this point as already handled in initialisation intent
+            startTime = startTime
+        )
         updateState {
             it.copy(
                 date = System.currentTimeInMillis,
-                screenState = WorkoutTrackerScreenState.TrackerScreen()
+                screenState = WorkoutTrackerScreenState.TrackerScreen(
+                    workoutDayName = defaultDayName,
+                    workoutDayNamePlaceholder = defaultDayName
+                )
             )
         }
+
         val exerciseNamesList = exercisesSelected.map { it.exerciseName }
-        if (exerciseNamesList.isNotEmpty()) {
-            workoutTrackManager.addExercises(exerciseNamesList)
-        } else {
-            workoutTrackManager.addExercise()
-        }
+        workoutTrackManager.addExercises(exerciseNamesList)
         startCollectingWorkoutTrackManager()
+        if (exerciseNamesList.isEmpty()) {
+            processIntent(WorkoutTrackerIntent.AddExerciseIntent)
+        }
     }
 
     private fun handleBackClickedIntent() {
@@ -454,9 +462,15 @@ class WorkoutTrackerViewModel(
                         }
                         is WorkoutTrackerScreenState.StartScreen,
                         null -> {
+                            val defaultDayName = defaultWorkoutDayName(
+                                weekDay = currentState.week ?: WeekDay.Mon,
+                                startTime = currentState.date ?: System.currentTimeInMillis
+                            )
                             WorkoutTrackerScreenState.TrackerScreen(
                                 exercises = exerciseList,
-                                isExerciseAdditionAllowed = isExerciseAdditionAllowed(exerciseList)
+                                isExerciseAdditionAllowed = isExerciseAdditionAllowed(exerciseList),
+                                workoutDayName = defaultDayName,
+                                workoutDayNamePlaceholder = defaultDayName
                             )
                         }
                     }

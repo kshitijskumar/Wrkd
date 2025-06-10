@@ -12,7 +12,6 @@ import org.example.project.wrkd.utils.System
 data class WorkoutTrackerState(
     val week: WeekDay? = null,
     val date: Long? = null,
-    val workoutDayName: String = "",
     val restTimer: Long? = null,
     val error: String? = null,
     val dialogType: WorkoutTrackerDialogTypes? = null,
@@ -33,6 +32,8 @@ sealed class WorkoutTrackerScreenState {
     data class TrackerScreen(
         val exercises: List<ExercisePlanInfoAppModel>? = null,
         val isExerciseAdditionAllowed: Boolean = true,
+        val workoutDayNamePlaceholder: String = "",
+        val workoutDayName: String = "",
     ) : WorkoutTrackerScreenState()
 
 }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldColors
@@ -38,6 +39,37 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
+fun AppHeaderTextField(
+    value: String,
+    textChangeFilter: (String) -> String = { it },
+    onValueEntered: (String) -> Unit,
+    placeholder: (@Composable () -> Unit)? = null,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    singleLine: Boolean = false,
+    maxLines: Int = 1,
+    readOnly: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    AppTextField(
+        value = value,
+        textChangeFilter = textChangeFilter,
+        onValueEntered = onValueEntered,
+        placeholder = placeholder,
+        keyboardOptions = keyboardOptions,
+        readOnly = readOnly,
+        modifier = modifier,
+        colors = TextFieldDefaults.appTextFieldColors(
+            backgroundColor = Color.Transparent,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent
+        ),
+        singleLine = singleLine,
+        maxLines = maxLines,
+        textStyle = AppTheme.typography.h5.copy(fontWeight = FontWeight.Bold),
+    )
+}
+
+@Composable
 fun AppTextField(
     value: String,
     textChangeFilter: (String) -> String = { it },
@@ -46,6 +78,9 @@ fun AppTextField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     colors: TextFieldColors = TextFieldDefaults.appTextFieldColors(),
     shape: Shape = RoundedCornerShape(AppTheme.corners.textField),
+    textStyle: TextStyle = LocalTextStyle.current,
+    singleLine: Boolean = false,
+    maxLines: Int = 1,
     readOnly: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -76,16 +111,23 @@ fun AppTextField(
         readOnly = readOnly,
         shape = shape,
         colors = colors,
+        maxLines = maxLines,
+        singleLine = singleLine,
+        textStyle = textStyle
     )
 }
 
 @Composable
 fun TextFieldDefaults.appTextFieldColors(
+    textColor: Color = AppTheme.color.black,
+    disabledTextColor: Color = AppTheme.color.black,
     backgroundColor: Color = AppTheme.color.lightGrey,
     focusedIndicatorColor: Color = Color.Transparent,
     unfocusedIndicatorColor: Color = Color.Transparent,
 ): TextFieldColors {
     return this.textFieldColors(
+        textColor = textColor,
+        disabledTextColor = disabledTextColor,
         backgroundColor = backgroundColor,
         focusedIndicatorColor = focusedIndicatorColor,
         unfocusedIndicatorColor = unfocusedIndicatorColor,
@@ -94,13 +136,15 @@ fun TextFieldDefaults.appTextFieldColors(
 
 @Composable
 fun AppTextFieldPlaceholder(
-    text: String
+    text: String,
+    style: TextStyle = LocalTextStyle.current
 ) {
     Text(
         text = text,
         color = AppTheme.color.black60,
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis
+        overflow = TextOverflow.Ellipsis,
+        style = style
     )
 }
 
