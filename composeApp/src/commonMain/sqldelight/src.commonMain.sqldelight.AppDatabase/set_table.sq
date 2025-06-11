@@ -6,6 +6,7 @@ CREATE TABLE Set_table(
     resistanceMethod TEXT AS ExerciseResistanceMethod NOT NULL,
     additionalWeight INTEGER NOT NULL,
     exerciseId TEXT NOT NULL,
+    setPerformedAt INTEGER NOT NULL,
     FOREIGN KEY (exerciseId) REFERENCES Exercise_table(id)
 );
 

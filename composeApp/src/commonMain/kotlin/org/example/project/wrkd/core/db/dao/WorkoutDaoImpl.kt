@@ -113,21 +113,29 @@ class WorkoutDaoImpl(
 
     private fun List<CombinedWorkoutData>.getAllExercisesForGivenDay(workoutId: String): List<ExercisePlanInfoEntity> {
         val relevantEntries = this.filter { it.workoutId == workoutId }
-        val exercisesGroup = relevantEntries.groupBy { (it.exerciseId to it.exerciseName) }
+        val exercisesGroup = relevantEntries.groupBy {
+            ExerciseDataHolder(
+                id = it.exerciseId,
+                name = it.exerciseName,
+                performedAt = it.exercisePerformedAt
+            )
+        }
 
         return exercisesGroup.mapNotNull { (exerciseInfo, sets) ->
-            val exName = exerciseInfo.second
-            val exId = exerciseInfo.first
-            if (exId == null || exName == null) {
+            val exName = exerciseInfo.name
+            val exId = exerciseInfo.id
+            val exercisePerformedAt = exerciseInfo.performedAt
+            if (exId == null || exName == null || exercisePerformedAt == null) {
                 null
             } else {
                 ExercisePlanInfoEntity(
                     name = exName,
                     exerciseId = exId,
-                    sets = sets.getAllSetsForGivenExercise(exId)
+                    sets = sets.getAllSetsForGivenExercise(exId),
+                    exercisePerformedAt = exercisePerformedAt
                 )
             }
-        }
+        }.sortedBy { it.exercisePerformedAt }
     }
 
     private fun List<CombinedWorkoutData>.getAllSetsForGivenExercise(exerciseId: String): List<ExerciseSetInfoEntity> {
@@ -138,9 +146,10 @@ class WorkoutDaoImpl(
                     setId = it.setId ?: return@mapNotNull null,
                     repsCount = it.repsCount?.toInt() ?: return@mapNotNull null,
                     resistanceMethod = it.resistanceMethod ?: return@mapNotNull null,
+                    setPerformedAt = it.setPerformedAt ?: return@mapNotNull null,
                     additionalWeight = it.additionalWeight ?: return@mapNotNull null
                 )
-            }
+            }.sortedBy { it.setPerformedAt }
     }
 }
 
@@ -156,6 +165,8 @@ private data class CombinedWorkoutData(
     val repsCount: Long?,
     val resistanceMethod: ExerciseResistanceMethod?,
     val additionalWeight: Long?,
+    val setPerformedAt: Long?,
+    val exercisePerformedAt: Long?
 ) {
     constructor(
         details: GetWorkoutDetails
@@ -170,7 +181,9 @@ private data class CombinedWorkoutData(
         setId = details.setId,
         repsCount = details.repsCount,
         resistanceMethod = details.resistanceMethod,
-        additionalWeight = details.additionalWeight
+        additionalWeight = details.additionalWeight,
+        setPerformedAt = details.setPerformedAt,
+        exercisePerformedAt = details.exercisePerformedAt
     )
 
     constructor(
@@ -186,7 +199,15 @@ private data class CombinedWorkoutData(
         setId = details.setId,
         repsCount = details.repsCount,
         resistanceMethod = details.resistanceMethod,
-        additionalWeight = details.additionalWeight
+        additionalWeight = details.additionalWeight,
+        setPerformedAt = details.setPerformedAt,
+        exercisePerformedAt = details.exercisePerformedAt
     )
 
 }
+
+private data class ExerciseDataHolder(
+    val id: String?,
+    val name: String?,
+    val performedAt: Long?
+)

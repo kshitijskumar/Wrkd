@@ -27,6 +27,7 @@ sealed class DayPlanEntity {
 data class ExercisePlanInfoEntity(
     val name: String,
     val exerciseId: String,
+    val exercisePerformedAt: Long,
     val sets: List<ExerciseSetInfoEntity>
 )
 
@@ -34,5 +35,6 @@ data class ExerciseSetInfoEntity(
     val setId: String,
     val repsCount: Int,
     val resistanceMethod: ExerciseResistanceMethod,
+    val setPerformedAt: Long,
     val additionalWeight: Long
 )

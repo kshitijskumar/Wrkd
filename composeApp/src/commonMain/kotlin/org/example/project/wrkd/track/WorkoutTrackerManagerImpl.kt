@@ -10,6 +10,7 @@ import org.example.project.wrkd.core.models.app.ExerciseSetInfoAppModel
 import org.example.project.wrkd.core.models.app.WeightInGrams
 import org.example.project.wrkd.core.models.app.updateSetInfo
 import org.example.project.wrkd.utils.KUUID
+import org.example.project.wrkd.utils.System
 
 class WorkoutTrackerManagerImpl : WorkoutTrackManager {
 
@@ -30,7 +31,8 @@ class WorkoutTrackerManagerImpl : WorkoutTrackManager {
             ExercisePlanInfoAppModel(
                 name = it,
                 exerciseId = KUUID.generateId(),
-                sets = listOf(ExerciseSetInfoAppModel.defaultSet())
+                sets = listOf(ExerciseSetInfoAppModel.defaultSet()),
+                exercisePerformedAt = System.currentTimeInMillis
             )
         }
 
@@ -62,7 +64,7 @@ class WorkoutTrackerManagerImpl : WorkoutTrackManager {
             if (isPresentInCurrentList) {
                 updatedList
             } else {
-                currentList + ExercisePlanInfoAppModel(name = exerciseName, exerciseId = KUUID.generateId(), sets = sets)
+                currentList + ExercisePlanInfoAppModel(name = exerciseName, exerciseId = KUUID.generateId(), sets = sets, exercisePerformedAt = System.currentTimeInMillis)
             }
         }
     }

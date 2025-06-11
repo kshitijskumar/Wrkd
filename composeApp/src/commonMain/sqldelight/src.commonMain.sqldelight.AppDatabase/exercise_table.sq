@@ -2,6 +2,7 @@ CREATE TABLE Exercise_table(
     id TEXT NOT NULL PRIMARY KEY,
     name TEXT NOT NULL,
     workoutId TEXT NOT NULL,
+    exercisePerformedAt INTEGER NOT NULL,
     FOREIGN KEY(workoutId) REFERENCES Workout_day_table(id)
 );
 

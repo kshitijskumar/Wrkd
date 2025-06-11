@@ -2,6 +2,7 @@ package org.example.project.wrkd.core.models.app
 
 import org.example.project.wrkd.core.models.WeekDay
 import org.example.project.wrkd.utils.KUUID
+import org.example.project.wrkd.utils.System
 import kotlin.jvm.JvmInline
 import kotlin.math.min
 
@@ -29,6 +30,7 @@ sealed class DayPlanAppModel {
 data class ExercisePlanInfoAppModel(
     val name: String,
     val exerciseId: String,
+    val exercisePerformedAt: Long,
     val sets: List<ExerciseSetInfoAppModel>
 )
 
@@ -36,6 +38,7 @@ data class ExerciseSetInfoAppModel(
     val setId: String,
     val repsCount: Int,
     val resistanceMethod: ExerciseResistanceMethod,
+    val setPerformedAt: Long,
     val additionalWeight: WeightInGrams
 ) {
     companion object {
@@ -44,6 +47,7 @@ data class ExerciseSetInfoAppModel(
                 setId = KUUID.generateId(),
                 repsCount = 1,
                 resistanceMethod = ExerciseResistanceMethod.BODY,
+                setPerformedAt = System.currentTimeInMillis,
                 additionalWeight = WeightInGrams.fromKg(0.0)
             )
         }

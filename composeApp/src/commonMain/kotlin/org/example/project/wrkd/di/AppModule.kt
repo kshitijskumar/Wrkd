@@ -1,10 +1,7 @@
 package org.example.project.wrkd.di
 
-import org.example.project.wrkd.addworkout.WorkoutRoutinePlanner
-import org.example.project.wrkd.addworkout.ui.DayPlanViewModel
 import org.example.project.wrkd.base.ui.BaseScreenViewModel
 import org.example.project.wrkd.core.db.AppDB
-import org.example.project.wrkd.core.db.dao.WorkoutDaoImpl
 import org.example.project.wrkd.core.local.UserDataLocalDataSource
 import org.example.project.wrkd.core.local.UserDataLocalDataSourceImpl
 import org.example.project.wrkd.core.navigation.AppNavigator
@@ -48,17 +45,6 @@ fun appModule(): Module {
             }
         ) {
             UserDataRepositoryImpl()
-        }
-
-        factory {
-            WorkoutRoutinePlanner()
-        }
-
-        factory {
-            DayPlanViewModel(
-                args = inject(),
-                workoutRoutinePlanner = inject()
-            )
         }
 
         factory<TimeUtils> {

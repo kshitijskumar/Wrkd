@@ -21,7 +21,8 @@ fun ExercisePlanInfoEntity.toExerciseTable(workoutId: String): Exercise_table {
     return Exercise_table(
         id = this.exerciseId,
         name = this.name,
-        workoutId = workoutId
+        workoutId = workoutId,
+        exercisePerformedAt = exercisePerformedAt
     )
 }
 
@@ -31,6 +32,7 @@ fun ExerciseSetInfoEntity.toSetTable(exerciseId: String): Set_table {
         repsCount = repsCount.toLong(),
         resistanceMethod = resistanceMethod,
         additionalWeight = additionalWeight,
-        exerciseId = exerciseId
+        exerciseId = exerciseId,
+        setPerformedAt = setPerformedAt
     )
 }

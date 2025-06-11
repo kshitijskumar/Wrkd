@@ -1,6 +1,7 @@
 package org.example.project.wrkd.home.ui
 
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -18,6 +19,7 @@ import org.example.project.wrkd.home.domain.WorkoutSessionInfo
 import org.example.project.wrkd.utils.DayTimeRange
 import org.example.project.wrkd.utils.System
 import org.example.project.wrkd.utils.TimeUtils
+import kotlin.math.abs
 
 class HomeViewModel(
     private val getAllWorkoutBetweenGivenTimestampUseCase: GetAllWorkoutBetweenGivenTimestampUseCase,
@@ -27,6 +29,7 @@ class HomeViewModel(
     private val getWorkoutSessionSectionUseCase: GetWorkoutSessionSectionUseCase
 ) : BaseViewModel<HomeState, HomeIntent>() {
 
+    private var initializationJob: Job? = null
     override fun initialData() = HomeState()
 
     init {
@@ -42,15 +45,27 @@ class HomeViewModel(
         }
     }
 
-    private fun handleInitializationIntent() = viewModelScope.launch {
-        updateState {
-            it.copy(title = getGreetings())
-        }
-        launch {
-            initialiseHomeInfoCards()
-        }
-        launch {
-            initialiseThisWeekWorkoutSection()
+    private fun handleInitializationIntent() {
+        initializationJob?.cancel()
+        initializationJob = viewModelScope.launch {
+            val currentTime = System.currentTimeInMillis
+            val week = timeUtils.getWeekFromTime(currentTime)
+            val dayRange = timeUtils.getDayTimeRange(timeUtils.getHourOfDay(currentTime))
+
+            updateState {
+                it.copy(
+                    title = getGreetings(dayRange),
+                    initializationTime = currentTime,
+                    week = week,
+                    dayRange = dayRange
+                )
+            }
+            launch {
+                initialiseHomeInfoCards()
+            }
+            launch {
+                initialiseThisWeekWorkoutSection()
+            }
         }
     }
 
@@ -79,9 +94,8 @@ class HomeViewModel(
         }
     }
 
-    private fun getGreetings(): String {
-        val currentHour = timeUtils.getHourOfDay(System.currentTimeInMillis)
-        return when (timeUtils.getDayTimeRange(currentHour)) {
+    private fun getGreetings(dayTimeRange: DayTimeRange?): String {
+        return when (dayTimeRange) {
             DayTimeRange.MORNING -> "Good Morning!"
             DayTimeRange.AFTERNOON -> "Good Afternoon!"
             DayTimeRange.EVENING,
@@ -131,5 +145,48 @@ class HomeViewModel(
         return getWorkoutSessionSectionUseCase.invoke(
             sectionLogic = SectionLogic.TodayAndCurrentWeek
         )
+    }
+
+    override fun viewStateActive() {
+        if (shouldRefreshInitialization()) {
+            processIntent(HomeIntent.InitializationIntent)
+        }
+    }
+
+    private fun shouldRefreshInitialization(): Boolean {
+        val currentState = currentState
+        val previousInitializationTime = currentState.initializationTime
+        val previousWeek = currentState.week
+        val previousDayRange = currentState.dayRange
+
+        if (previousInitializationTime == null && previousWeek == null && previousDayRange == null) {
+            // no need to refresh initialization, first initialization will happen through init
+            return false
+        }
+
+        val currentTime = System.currentTimeInMillis
+        val currentDayRange = timeUtils.getDayTimeRange(timeUtils.getHourOfDay(currentTime))
+
+        if (currentDayRange != previousDayRange) {
+            // day range changed -> relevant for updating greetings
+            return true
+        }
+        val currentWeek = timeUtils.getWeekFromTime(currentTime)
+
+        if (currentWeek != previousWeek) {
+            // week changed -> relevant for updating week's progress
+            return true
+        }
+
+        // ideally this should always be positive, unless user changed the system time, in that case abs will be helpful
+        val diffFromLastInitialization = abs(currentTime - (previousInitializationTime ?: currentTime))
+
+        if (diffFromLastInitialization >= TimeUtils.MILLIS_IN_A_DAY) {
+            // ideally this should cover the case where user opened the app after 7 days on the same week day
+            // same hour range, then above checks will fail, this will cover that
+            return true
+        }
+
+        return false
     }
 }

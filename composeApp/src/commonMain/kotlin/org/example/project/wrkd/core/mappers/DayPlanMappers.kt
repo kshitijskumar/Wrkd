@@ -33,7 +33,8 @@ private fun ExercisePlanInfoEntity.toAppModel(): ExercisePlanInfoAppModel {
     return ExercisePlanInfoAppModel(
         name = name,
         exerciseId = exerciseId,
-        sets = sets.map { it.toAppModel() }
+        sets = sets.map { it.toAppModel() },
+        exercisePerformedAt = exercisePerformedAt
     )
 }
 
@@ -42,7 +43,8 @@ private fun ExerciseSetInfoEntity.toAppModel(): ExerciseSetInfoAppModel {
         setId = setId,
         repsCount = repsCount,
         resistanceMethod = resistanceMethod,
-        additionalWeight = WeightInGrams(additionalWeight)
+        additionalWeight = WeightInGrams(additionalWeight),
+        setPerformedAt = setPerformedAt
     )
 }
 
@@ -71,7 +73,8 @@ fun ExercisePlanInfoAppModel.toEntity(): ExercisePlanInfoEntity {
     return ExercisePlanInfoEntity(
         name = name,
         exerciseId = exerciseId,
-        sets = sets.map { it.toEntity() }
+        sets = sets.map { it.toEntity() },
+        exercisePerformedAt = exercisePerformedAt
     )
 }
 
@@ -80,6 +83,7 @@ fun ExerciseSetInfoAppModel.toEntity(): ExerciseSetInfoEntity {
         setId = setId,
         repsCount = repsCount,
         resistanceMethod = resistanceMethod,
-        additionalWeight = additionalWeight.value
+        additionalWeight = additionalWeight.value,
+        setPerformedAt = setPerformedAt
     )
 }

@@ -18,11 +18,13 @@ SELECT
 
     ed.id AS exerciseId,
     ed.name AS exerciseName,
+    ed.exercisePerformedAt AS exercisePerformedAt,
 
     sd.id AS setId,
     sd.repsCount,
     sd.resistanceMethod,
-    sd.additionalWeight
+    sd.additionalWeight,
+    sd.setPerformedAt
 
 FROM Workout_day_table wd
 LEFT JOIN Exercise_table ed ON ed.workoutId = wd.id
@@ -42,11 +44,13 @@ SELECT
 
     ed.id AS exerciseId,
     ed.name AS exerciseName,
+    ed.exercisePerformedAt AS exercisePerformedAt,
 
     sd.id AS setId,
     sd.repsCount,
     sd.resistanceMethod,
-    sd.additionalWeight
+    sd.additionalWeight,
+    sd.setPerformedAt
 
 FROM Workout_day_table wd
 LEFT JOIN Exercise_table ed ON ed.workoutId = wd.id
