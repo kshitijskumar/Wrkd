@@ -100,6 +100,8 @@ sealed class WorkoutTrackerIntent {
 
     data class DeleteExerciseIntent(val exerciseId: String) : WorkoutTrackerIntent()
 
+    data object CompleteBottomSheetPositiveClickedIntent : WorkoutTrackerIntent()
+
 }
 
 sealed class WorkoutTrackerBottomSheetType {
@@ -117,5 +119,10 @@ sealed class WorkoutTrackerBottomSheetType {
                 return name.isNotEmpty() && sets.isNotEmpty()
             }
     }
+
+    data class WorkoutComplete(
+        val totalDurationWorkedOut: String,
+        val totalExercises: Int
+    ) : WorkoutTrackerBottomSheetType()
 
 }

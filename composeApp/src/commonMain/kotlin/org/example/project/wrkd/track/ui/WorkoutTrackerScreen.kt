@@ -6,9 +6,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,6 +28,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ButtonDefaults
 import androidx.compose.material.Card
+import androidx.compose.material.Divider
 import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.ModalBottomSheetLayout
@@ -80,7 +83,8 @@ fun WorkoutTrackerScreen(
 
     val bottomSheetState = rememberModalBottomSheetState(
         initialValue = ModalBottomSheetValue.Hidden,
-        skipHalfExpanded = true
+        skipHalfExpanded = true,
+        confirmValueChange = { false }
     )
 
     LaunchedEffect(state.error) {
@@ -110,6 +114,12 @@ fun WorkoutTrackerScreen(
                     WorkoutExerciseDetailBottomSheetContent(
                         state = bsState,
                         restTimer = state.restTimer,
+                        sendIntent = vm::processIntent
+                    )
+                }
+                is WorkoutTrackerBottomSheetType.WorkoutComplete -> {
+                    WorkoutCompleteBottomSheetContent(
+                        state = bsState,
                         sendIntent = vm::processIntent
                     )
                 }
@@ -253,6 +263,121 @@ fun WorkoutExerciseDetailBottomSheetContent(
                     .fillMaxWidth()
             )
         }
+    }
+}
+
+@Composable
+fun WorkoutCompleteBottomSheetContent(
+    state: WorkoutTrackerBottomSheetType.WorkoutComplete,
+    sendIntent: (WorkoutTrackerIntent) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                top = AppTheme.dimens.medium2,
+                bottom = AppTheme.dimens.medium1
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Workout Complete!",
+            style = AppTheme.typography.h4,
+            fontWeight = FontWeight.Bold,
+            color = AppTheme.color.black87,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(Modifier.height(AppTheme.dimens.medium2))
+
+        WorkoutCompleteHighlightSection(
+            totalDuration = state.totalDurationWorkedOut,
+            totalExercises = state.totalExercises,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(AppTheme.dimens.medium2))
+
+        AppPrimaryButton(
+            text = "Okay",
+            onClick = {
+                sendIntent.invoke(WorkoutTrackerIntent.CompleteBottomSheetPositiveClickedIntent)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = AppTheme.dimens.medium1)
+        )
+    }
+}
+
+@Composable
+fun WorkoutCompleteHighlightSection(
+    totalDuration: String,
+    totalExercises: Int,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .padding(
+                horizontal = AppTheme.dimens.medium1
+            )
+            .background(
+                color = AppTheme.color.lightGrey,
+                shape = RoundedCornerShape(AppTheme.corners.mainCard)
+            )
+            .padding(
+                horizontal = AppTheme.dimens.medium1,
+                vertical = AppTheme.dimens.medium2
+            )
+    ) {
+        WorkoutCompleteHighlightItem(
+            title = "Total duration",
+            value = totalDuration,
+            modifier = Modifier.weight(1f)
+        )
+
+        Divider(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(AppTheme.dimens.small1),
+            color = AppTheme.color.mediumGrey
+        )
+
+        WorkoutCompleteHighlightItem(
+            title = "Total exercises",
+            value = "$totalExercises",
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+fun WorkoutCompleteHighlightItem(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = title,
+            style = AppTheme.typography.subtitle1,
+            color = AppTheme.color.black60,
+            textAlign = TextAlign.Center
+        )
+
+        Text(
+            text = value,
+            style = AppTheme.typography.h5,
+            color = AppTheme.color.black87,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 

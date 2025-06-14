@@ -1,17 +1,17 @@
 package org.example.project.wrkd.core.navigation
 
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
-import kotlinx.serialization.decodeFromString
-import org.example.project.wrkd.core.navigation.NavigationData.Companion.getArgs
+import androidx.navigation.NavOptions
 import org.example.project.wrkd.core.navigation.args.SceneArgs
+import org.example.project.wrkd.core.navigation.args.buildNavigationRoute
 import org.example.project.wrkd.core.navigation.scenes.AppScenes
-import org.example.project.wrkd.utils.AppJson
-import kotlin.jvm.JvmInline
 
 interface AppNavigator {
 
-    fun navigate(args: SceneArgs)
+    fun navigate(
+        args: SceneArgs,
+        navOptions: NavOptions? = null
+    )
 
     fun goBack()
 
@@ -24,8 +24,11 @@ interface AppNavigatorManager {
 class AppNavigatorImpl : AppNavigator, AppNavigatorManager {
 
     private var controller: NavHostController? = null
-    override fun navigate(args: SceneArgs) {
-        controller?.navigate(NavigationData(args).buildRoute())
+    override fun navigate(args: SceneArgs, navOptions: NavOptions?) {
+        controller?.navigate(
+            route = args.buildNavigationRoute(),
+            navOptions = navOptions
+        )
     }
 
     override fun goBack() {
@@ -37,32 +40,52 @@ class AppNavigatorImpl : AppNavigator, AppNavigatorManager {
     }
 }
 
-@JvmInline
-value class NavigationData(val args: SceneArgs) {
+class NavOptionsDSLBuilder {
+    private val operations = mutableListOf<NavOptionsOperations>()
 
-    fun buildRoute(): String {
-        val argsJson = AppJson.encodeToString(args)
-        return buildString {
-            append(args.scene.route)
-            append("/$argsJson")
-        }
+    fun setPopUpTo(
+        scene: AppScenes,
+        inclusive: Boolean,
+    ) {
+        operations.add(
+            NavOptionsOperations.SetPopUpTo(
+                scene = scene,
+                inclusive = inclusive,
+            )
+        )
     }
-    companion object {
-        const val ARGS = "args"
 
-        fun getOptionalArgs(backStackEntry: NavBackStackEntry): SceneArgs? {
-            val args = backStackEntry.arguments?.getString(ARGS)?.takeIf { it.isNotEmpty() } ?: return null
-            return AppJson.decodeFromString(args)
-        }
-        inline fun <reified T: SceneArgs>getArgs(backStackEntry: NavBackStackEntry): T {
-            val args = this.getOptionalArgs(backStackEntry)
-
-            requireNotNull(args) {
-                "Expected args are not present in backStackEntry"
+    /**
+     * NO NEED TO CALL THIS METHOD
+     */
+    internal fun getBuilder(): NavOptions.Builder {
+        var builder = NavOptions.Builder()
+        operations.forEach {
+            builder = when(it) {
+                is NavOptionsOperations.SetPopUpTo -> {
+                    builder.setPopUpTo(
+                        route = it.scene.baseRoute(),
+                        inclusive = it.inclusive,
+                    )
+                    builder.setLaunchSingleTop(true)
+                }
             }
-
-            return args as T
         }
+        return builder
     }
+
+    private sealed class NavOptionsOperations {
+        data class SetPopUpTo(
+            val scene: AppScenes,
+            val inclusive: Boolean
+        ) : NavOptionsOperations()
+    }
+
+}
+
+fun navOptions(block: NavOptionsDSLBuilder.() -> Unit): NavOptions {
+    val builder = NavOptionsDSLBuilder()
+    builder.block()
+    return builder.getBuilder().build()
 }
 

@@ -1,6 +1,7 @@
 package org.example.project.wrkd.track.ui
 
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavOptions
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
@@ -13,7 +14,10 @@ import org.example.project.wrkd.core.models.app.WeightInGrams
 import org.example.project.wrkd.core.models.app.isValid
 import org.example.project.wrkd.core.models.dayName
 import org.example.project.wrkd.core.navigation.AppNavigator
+import org.example.project.wrkd.core.navigation.args.AppBaseScreenArgs
 import org.example.project.wrkd.core.navigation.args.WorkoutTrackingArgs
+import org.example.project.wrkd.core.navigation.navOptions
+import org.example.project.wrkd.core.navigation.scenes.AppScenes
 import org.example.project.wrkd.core.ui.BaseViewModel
 import org.example.project.wrkd.track.WorkoutTrackManager
 import org.example.project.wrkd.track.domain.GetDistinctExercisesForDayBetweenTimestampUseCase
@@ -62,6 +66,7 @@ class WorkoutTrackerViewModel(
             is WorkoutTrackerIntent.RemoveSetIntent -> handleRemoveSetIntent(intent)
             is WorkoutTrackerIntent.DeleteExerciseIntent -> handleDeleteExerciseIntent(intent)
             is WorkoutTrackerIntent.EditExerciseIntent -> handleEditExerciseIntent(intent)
+            is WorkoutTrackerIntent.CompleteBottomSheetPositiveClickedIntent -> handleCompleteBottomSheetPositiveClickedIntent(intent)
         }
     }
 
@@ -172,6 +177,7 @@ class WorkoutTrackerViewModel(
                         sets = bsState.sets + ExerciseSetInfoAppModel.defaultSet()
                     )
                 }
+                is WorkoutTrackerBottomSheetType.WorkoutComplete,
                 null -> bsState
             }
 
@@ -265,6 +271,7 @@ class WorkoutTrackerViewModel(
                     )
                 }
                 val currentTime = System.currentTimeInMillis
+                val duration = currentTime - startedAt
                 saveWorkoutUseCase.invoke(
                     weekDay = weekDay,
                     dayName = screenState.workoutDayName.ifEmpty { defaultWorkoutDayName(weekDay, startedAt) },
@@ -272,6 +279,16 @@ class WorkoutTrackerViewModel(
                     duration = currentTime - startedAt,
                     exercises = exercisesList
                 )
+                updateState {
+                    it.copy(
+                        bottomSheetType = WorkoutTrackerBottomSheetType.WorkoutComplete(
+                            totalDurationWorkedOut = timeUtils.durationMillisToHourMinute(
+                                durationMillis = duration
+                            ),
+                            totalExercises = exercisesList.size
+                        )
+                    )
+                }
             }
         }
     }
@@ -441,9 +458,24 @@ class WorkoutTrackerViewModel(
         }
     }
 
+    private fun handleCompleteBottomSheetPositiveClickedIntent(intent: WorkoutTrackerIntent.CompleteBottomSheetPositiveClickedIntent) {
+        appNavigator.navigate(
+            args = AppBaseScreenArgs,
+            navOptions = navOptions {
+                setPopUpTo(scene = AppScenes.AppBaseScreen, inclusive = true)
+            }
+        )
+        updateState {
+            it.copy(
+                bottomSheetType = null
+            )
+        }
+    }
+
     private fun currentExerciseDetails(): WorkoutTrackerBottomSheetType.ExerciseDetails? {
         return when(val bsType = currentState.bottomSheetType) {
             is WorkoutTrackerBottomSheetType.ExerciseDetails -> bsType
+            is WorkoutTrackerBottomSheetType.WorkoutComplete,
             null -> return null
         }
     }
