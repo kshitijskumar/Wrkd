@@ -1,50 +1,78 @@
 package org.example.project.wrkd.track
 
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.Flow
 import org.example.project.wrkd.core.models.app.ExercisePlanInfoAppModel
-import org.example.project.wrkd.core.models.app.ExerciseResistanceMethod
 import org.example.project.wrkd.core.models.app.ExerciseSetInfoAppModel
 
 interface WorkoutTrackManager {
 
-    val state: StateFlow<List<ExercisePlanInfoAppModel>>
+    /**
+     * @param workoutId workout id to initialise state, otherwise default state
+     */
+    fun initialise(
+        workoutId: String?
+    ): Flow<WorkoutTrackInfo>
 
-    fun addExercise()
+    /**
+     * Initialises the state with stub entries for the given exercises name
+     */
+    fun initialiseWithExercises(
+        exercisesName: List<String>
+    ): Flow<WorkoutTrackInfo>
 
-    fun addExercise(name: String)
+    /**
+     * @param exerciseId exercise if for an already existing exercise to become editable, otherwise default exercise
+     */
+    fun createEditableEntry(
+        exerciseId: String?
+    ): Flow<WorkoutEditableEntry?>
 
-    fun addExercises(list: List<String>)
+    fun resetEditableEntry()
 
-    fun addExercise(
-        exerciseId: String?,
-        exerciseName: String,
-        sets: List<ExerciseSetInfoAppModel>
-    )
+    fun submitEditableEntry()
 
-    fun changeExerciseName(id: String, nameEntered: String)
+    fun deleteExercise(exerciseId: String)
 
-    fun addSet(exerciseId: String)
+    fun addSet()
 
-    fun removeSet(exerciseId: String, setId: String)
+    fun deleteSet(setId: String)
 
-    fun enterRepsCount(
-        exerciseId: String,
+    fun exerciseNameChange(name: String)
+
+    fun repCountChange(
         setId: String,
-        repCount: Int
+        reps: Int
     )
 
-    fun changeResistanceMethod(
-        exerciseId: String,
-        setId: String,
-        resistanceMethod: ExerciseResistanceMethod
+    fun additionalWeightChange(
+        setId: String?,
+        weight: Double
     )
 
-    fun addAdditionalWeight(
-        exerciseId: String,
-        setId: String,
-        additionalWeight: Double
-    )
+}
 
-    fun deleteExercise(id: String)
+data class WorkoutTrackInfo(
+    val dayName: String,
+    val exercises: List<ExercisePlanInfoAppModel>,
+)
 
+data class WorkoutEditableEntry(
+    val exerciseId: String?,
+    val name: String,
+    val sets: List<ExerciseSetInfoAppModel>
+) {
+    val shouldEnableSubmitBtn: Boolean
+        get() {
+            return name.isNotEmpty() && sets.isNotEmpty()
+        }
+
+    companion object {
+        fun default(): WorkoutEditableEntry {
+            return WorkoutEditableEntry(
+                exerciseId = null,
+                name = "",
+                sets = listOf(ExerciseSetInfoAppModel.defaultSet())
+            )
+        }
+    }
 }

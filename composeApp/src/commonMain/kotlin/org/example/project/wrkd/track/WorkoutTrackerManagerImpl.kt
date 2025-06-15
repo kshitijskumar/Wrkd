@@ -1,8 +1,9 @@
 package org.example.project.wrkd.track
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import org.example.project.wrkd.core.models.app.ExercisePlanInfoAppModel
 import org.example.project.wrkd.core.models.app.ExerciseResistanceMethod
@@ -14,155 +15,207 @@ import org.example.project.wrkd.utils.System
 
 class WorkoutTrackerManagerImpl : WorkoutTrackManager {
 
-    private val _state = MutableStateFlow<List<ExercisePlanInfoAppModel>>(listOf())
-    override val state: StateFlow<List<ExercisePlanInfoAppModel>> = _state.asStateFlow()
+    private val _state = MutableStateFlow<WorkoutTrackManagerInternalState?>(null)
 
-    override fun addExercise() {
-        addExercise(name = "")
+    override fun initialise(workoutId: String?): Flow<WorkoutTrackInfo> {
+        val defaultState = WorkoutTrackManagerInternalState(
+            dayName = "",
+            exercises = listOf(),
+            editableEntry = null
+        )
+        _state.update {
+            it?.copy(
+                dayName = defaultState.dayName,
+                exercises = defaultState.exercises
+            ) ?: defaultState
+        }
+
+        return _state
+            .filterNotNull()
+            .map {
+                WorkoutTrackInfo(
+                    dayName = it.dayName,
+                    exercises = it.exercises
+                )
+            }
     }
 
-    override fun addExercise(name: String) {
-        addExercises(listOf(name))
-    }
-
-    override fun addExercises(list: List<String>) {
-        // when adding exercise have a prefilled set
-        val exerciseList = list.map {
+    override fun initialiseWithExercises(exercisesName: List<String>): Flow<WorkoutTrackInfo> {
+        val stubExercisesEntries = exercisesName.map {
             ExercisePlanInfoAppModel(
                 name = it,
                 exerciseId = KUUID.generateId(),
-                sets = listOf(ExerciseSetInfoAppModel.defaultSet()),
-                exercisePerformedAt = System.currentTimeInMillis
+                exercisePerformedAt = System.currentTimeInMillis,
+                sets = listOf(ExerciseSetInfoAppModel.defaultSet())
             )
         }
 
-        _state.update { it + exerciseList }
+        val default = WorkoutTrackManagerInternalState(
+            dayName = "",
+            exercises = stubExercisesEntries,
+            editableEntry = null
+        )
+        _state.update {
+            it?.copy(
+                exercises = default.exercises
+            ) ?: default
+        }
+
+        return _state
+            .filterNotNull()
+            .map {
+                WorkoutTrackInfo(
+                    dayName = it.dayName,
+                    exercises = it.exercises
+                )
+            }
     }
 
-    override fun addExercise(
-        exerciseId: String?,
-        exerciseName: String,
-        sets: List<ExerciseSetInfoAppModel>
-    ) {
-        _state.update { currentList ->
-            var isPresentInCurrentList = false
-            val updatedList = if (exerciseId != null) {
-                currentList.updateForGivenExerciseId(
-                    id = exerciseId,
-                    update = {
-                        isPresentInCurrentList = true
-                        it.copy(
-                            name = exerciseName,
-                            sets = sets
-                        )
+
+
+    override fun createEditableEntry(exerciseId: String?): Flow<WorkoutEditableEntry?> {
+        _state.update {
+            val editableEntry = it?.createEditableEntryForExercise(exerciseId ?: "") ?: WorkoutEditableEntry.default()
+
+            it?.copy(
+                editableEntry = editableEntry
+            )
+        }
+
+        return _state
+            .filterNotNull()
+            .map {
+                it.editableEntry
+            }
+    }
+
+    override fun deleteExercise(exerciseId: String) {
+        _state.update {
+            it?.copy(
+                exercises = it.exercises.filter { ex -> ex.exerciseId != exerciseId }
+            )
+        }
+    }
+
+    private fun WorkoutTrackManagerInternalState.createEditableEntryForExercise(id: String): WorkoutEditableEntry? {
+        val exerciseForId = this.exercises.find { it.exerciseId == id }
+
+        return exerciseForId?.let {
+            WorkoutEditableEntry(
+                exerciseId = id,
+                name = exerciseForId.name,
+                sets = exerciseForId.sets
+            )
+        }
+    }
+
+    override fun resetEditableEntry() {
+        _state.update {
+            it?.copy(
+                editableEntry = null
+            )
+        }
+    }
+
+    override fun submitEditableEntry() {
+        val entry = _state.value?.editableEntry ?: return
+        _state.update {
+            val exercises = it?.exercises ?: listOf()
+            var isEntryPresentInList = false
+            var updatedExercises = exercises.map { ex ->
+                if (ex.exerciseId == entry.exerciseId) {
+                    isEntryPresentInList = true
+                    ex.copy(
+                        name = entry.name,
+                        sets = entry.sets
+                    )
+                } else {
+                    ex
+                }
+            }
+
+            if (!isEntryPresentInList) {
+                updatedExercises = exercises + ExercisePlanInfoAppModel(
+                    name = entry.name,
+                    exerciseId = KUUID.generateId(),
+                    exercisePerformedAt = System.currentTimeInMillis,
+                    sets = entry.sets
+                )
+            }
+
+            it?.copy(
+                exercises = updatedExercises
+            )
+        }
+        resetEditableEntry()
+    }
+
+    override fun addSet() {
+        _state.update {
+            it?.copy(
+                editableEntry = it.editableEntry?.copy(
+                    sets = it.editableEntry.sets + ExerciseSetInfoAppModel.defaultSet()
+                )
+            )
+        }
+    }
+
+    override fun deleteSet(setId: String) {
+        _state.update {
+            it?.copy(
+                editableEntry = it.editableEntry?.copy(
+                    sets = it.editableEntry.sets.filter { set -> set.setId != setId }
+                )
+            )
+        }
+    }
+
+    override fun exerciseNameChange(name: String) {
+        _state.update {
+            it?.copy(
+                editableEntry = it.editableEntry?.copy(
+                    name = name
+                )
+            )
+        }
+    }
+
+    override fun repCountChange(setId: String, reps: Int) {
+        _state.update {
+            it?.copy(
+                editableEntry = it.editableEntry?.copy(
+                    sets = it.editableEntry.sets.map { set ->
+                        if (set.setId == setId) {
+                            set.copy(repsCount = reps)
+                        } else {
+                            set
+                        }
                     }
                 )
-            } else {
-                currentList
-            }
-
-            if (isPresentInCurrentList) {
-                updatedList
-            } else {
-                currentList + ExercisePlanInfoAppModel(name = exerciseName, exerciseId = KUUID.generateId(), sets = sets, exercisePerformedAt = System.currentTimeInMillis)
-            }
-        }
-    }
-
-    private fun List<ExercisePlanInfoAppModel>.updateForGivenExerciseId(
-        id: String,
-        update: (ExercisePlanInfoAppModel) -> ExercisePlanInfoAppModel
-    ) : List<ExercisePlanInfoAppModel> {
-        return this.map {
-            if (it.exerciseId == id) {
-                update.invoke(it)
-            } else {
-                it
-            }
-        }
-    }
-
-    override fun changeExerciseName(id: String, nameEntered: String) {
-        _state.update {  currentList ->
-            currentList.map {
-                if (it.exerciseId == id) {
-                    it.copy(name = nameEntered)
-                } else {
-                    it
-                }
-            }
-        }
-    }
-
-    override fun addSet(exerciseId: String) {
-        _state.update { currentList ->
-            currentList.map {
-                if (it.exerciseId == exerciseId) {
-                    it.copy(
-                        sets = it.sets + ExerciseSetInfoAppModel.defaultSet()
-                    )
-                } else {
-                    it
-                }
-            }
-        }
-    }
-
-    override fun removeSet(exerciseId: String, setId: String) {
-        _state.update { currentList ->
-            currentList.map {
-                if (it.exerciseId == exerciseId) {
-                    it.copy(
-                        sets = it.sets.filter { set -> set.setId != setId }
-                    )
-                } else {
-                    it
-                }
-            }
-        }
-    }
-
-    override fun enterRepsCount(exerciseId: String, setId: String, repCount: Int) {
-        if (repCount <= 0) return
-        _state.update { currentList ->
-            currentList.updateSetInfo(
-                exerciseId = exerciseId,
-                setId = setId,
-                update = { it.copy(repsCount = repCount) }
             )
         }
     }
 
-    override fun changeResistanceMethod(
-        exerciseId: String,
-        setId: String,
-        resistanceMethod: ExerciseResistanceMethod
-    ) {
+    override fun additionalWeightChange(setId: String?, weight: Double) {
         _state.update {
-            it.updateSetInfo(
-                exerciseId = exerciseId,
-                setId = setId,
-                update = { set ->
-                    set.copy(resistanceMethod = resistanceMethod)
-                },
+            it?.copy(
+                editableEntry = it.editableEntry?.copy(
+                    sets = it.editableEntry.sets.map { set ->
+                        if (set.setId == setId) {
+                            set.copy(additionalWeight = WeightInGrams.fromKg(weight))
+                        } else {
+                            set
+                        }
+                    }
+                )
             )
         }
     }
 
-    override fun addAdditionalWeight(exerciseId: String, setId: String, additionalWeight: Double) {
-        if (additionalWeight < 0) return
-        _state.update {
-            it.updateSetInfo(
-                exerciseId = exerciseId,
-                setId = setId,
-                update = { set -> set.copy(additionalWeight = WeightInGrams.fromKg(additionalWeight)) }
-            )
-        }
-    }
-
-    override fun deleteExercise(id: String) {
-        _state.update {
-            it.filter { ex -> ex.exerciseId != id }
-        }
-    }
 }
+
+private data class WorkoutTrackManagerInternalState(
+    val dayName: String,
+    val exercises: List<ExercisePlanInfoAppModel>,
+    val editableEntry: WorkoutEditableEntry?
+)

@@ -71,12 +71,6 @@ sealed class WorkoutTrackerIntent {
         val count: Int
     ) : WorkoutTrackerIntent()
 
-    data class ChangeResistanceMethodIntent(
-        val exerciseId: String,
-        val setId: String,
-        val resistanceMethod: ExerciseResistanceMethod
-    ) : WorkoutTrackerIntent()
-
     data object ToggleRestTimerIntent : WorkoutTrackerIntent()
 
     data class CompleteWorkoutIntent(val hasConfirmed: Boolean) : WorkoutTrackerIntent()

@@ -1,7 +1,6 @@
 package org.example.project.wrkd.track.ui
 
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.NavOptions
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
@@ -9,8 +8,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.example.project.wrkd.core.models.WeekDay
 import org.example.project.wrkd.core.models.app.ExercisePlanInfoAppModel
-import org.example.project.wrkd.core.models.app.ExerciseSetInfoAppModel
-import org.example.project.wrkd.core.models.app.WeightInGrams
 import org.example.project.wrkd.core.models.app.isValid
 import org.example.project.wrkd.core.models.dayName
 import org.example.project.wrkd.core.navigation.AppNavigator
@@ -41,6 +38,7 @@ class WorkoutTrackerViewModel(
 
     private var toggleTimerJob: Job? = null
     private var workoutManagerJob: Job? = null
+    private var editableEntryJob: Job? = null
 
     init {
         processIntent(WorkoutTrackerIntent.InitializationIntent(args))
@@ -49,24 +47,23 @@ class WorkoutTrackerViewModel(
     override fun processIntent(intent: WorkoutTrackerIntent) {
         when (intent) {
             is WorkoutTrackerIntent.InitializationIntent -> handleInitializationIntent(intent)
+            is WorkoutTrackerIntent.ExerciseClickedInStartScreen -> handleExerciseClickedInStartScreen(intent)
+            WorkoutTrackerIntent.StartWorkoutIntent -> handleStartWorkoutIntent()
             is WorkoutTrackerIntent.AddExerciseIntent -> handleAddExerciseIntent(intent)
             is WorkoutTrackerIntent.AddRepsCountIntent -> handleAddRepsCountIntent(intent)
             is WorkoutTrackerIntent.AddSetIntent -> handleAddSetIntent(intent)
-            is WorkoutTrackerIntent.ChangeResistanceMethodIntent -> handleChangeResistanceMethodIntent(intent)
             is WorkoutTrackerIntent.EnterExerciseNameIntent -> handleEnterExerciseNameIntent(intent)
             is WorkoutTrackerIntent.ToggleRestTimerIntent -> handleToggleRestTimerIntent(intent)
-            is WorkoutTrackerIntent.CompleteWorkoutIntent -> handleCompleteWorkoutIntent(intent)
             is WorkoutTrackerIntent.WorkoutDayNameEnteredIntent -> handleWorkoutDayNameEnteredIntent(intent)
             is WorkoutTrackerIntent.WeightChangeIntent -> handleWorkoutWeightChangeIntent(intent)
-            WorkoutTrackerIntent.DismissDialogIntent -> handleDismissDialogIntent()
-            is WorkoutTrackerIntent.ExerciseClickedInStartScreen -> handleExerciseClickedInStartScreen(intent)
-            WorkoutTrackerIntent.StartWorkoutIntent -> handleStartWorkoutIntent()
-            WorkoutTrackerIntent.BackClickedIntent -> handleBackClickedIntent()
-            WorkoutTrackerIntent.SubmitExerciseIntent -> handleSubmitExerciseIntent()
             is WorkoutTrackerIntent.RemoveSetIntent -> handleRemoveSetIntent(intent)
+            WorkoutTrackerIntent.SubmitExerciseIntent -> handleSubmitExerciseIntent()
             is WorkoutTrackerIntent.DeleteExerciseIntent -> handleDeleteExerciseIntent(intent)
             is WorkoutTrackerIntent.EditExerciseIntent -> handleEditExerciseIntent(intent)
+            WorkoutTrackerIntent.DismissDialogIntent -> handleDismissDialogIntent()
             is WorkoutTrackerIntent.CompleteBottomSheetPositiveClickedIntent -> handleCompleteBottomSheetPositiveClickedIntent(intent)
+            is WorkoutTrackerIntent.CompleteWorkoutIntent -> handleCompleteWorkoutIntent(intent)
+            WorkoutTrackerIntent.BackClickedIntent -> handleBackClickedIntent()
         }
     }
 
@@ -125,14 +122,27 @@ class WorkoutTrackerViewModel(
             return // shouldn't happen
         }
 
-        updateState {
-            it.copy(
-                bottomSheetType = WorkoutTrackerBottomSheetType.ExerciseDetails(
-                    exerciseId = null,
-                    name = "",
-                    sets = listOf(ExerciseSetInfoAppModel.defaultSet())
-                )
-            )
+        startCollectingEditableEntryInfo(null)
+    }
+
+    private fun startCollectingEditableEntryInfo(exerciseId: String?) {
+        editableEntryJob?.cancel()
+        editableEntryJob = viewModelScope.launch {
+            workoutTrackManager.createEditableEntry(exerciseId).collect { entry ->
+                val bsType = entry?.let {
+                    WorkoutTrackerBottomSheetType.ExerciseDetails(
+                        exerciseId = entry.exerciseId,
+                        name = entry.name,
+                        sets = entry.sets
+                    )
+                }
+
+                updateState {
+                    it.copy(
+                        bottomSheetType = bsType
+                    )
+                }
+            }
         }
     }
 
@@ -152,59 +162,16 @@ class WorkoutTrackerViewModel(
                 )
             }
         } else {
-            val exerciseDetails = currentExerciseDetails() ?: return
-            updateState {
-                it.copy(
-                    bottomSheetType = exerciseDetails.copy(
-                        sets = exerciseDetails.sets.map { set ->
-                            if (set.setId == intent.setId) {
-                                set.copy(repsCount = intent.count)
-                            } else {
-                                set
-                            }
-                        }
-                    )
-                )
-            }
+            workoutTrackManager.repCountChange(intent.setId, intent.count)
         }
     }
 
     private fun handleAddSetIntent(intent: WorkoutTrackerIntent.AddSetIntent) {
-        updateState {
-            val updatedBsState = when(val bsState = it.bottomSheetType) {
-                is WorkoutTrackerBottomSheetType.ExerciseDetails -> {
-                    bsState.copy(
-                        sets = bsState.sets + ExerciseSetInfoAppModel.defaultSet()
-                    )
-                }
-                is WorkoutTrackerBottomSheetType.WorkoutComplete,
-                null -> bsState
-            }
-
-            it.copy(
-                bottomSheetType = updatedBsState
-            )
-        }
+        workoutTrackManager.addSet()
     }
-
-    private fun handleChangeResistanceMethodIntent(intent: WorkoutTrackerIntent.ChangeResistanceMethodIntent) {
-        workoutTrackManager.changeResistanceMethod(
-            exerciseId = intent.exerciseId,
-            setId = intent.setId,
-            resistanceMethod = intent.resistanceMethod
-        )
-    }
-
     private fun handleEnterExerciseNameIntent(intent: WorkoutTrackerIntent.EnterExerciseNameIntent) {
         // TODO::KSHITIJ - add auto suggestion kind of feature for exercise name
-        val exerciseDetails = currentExerciseDetails() ?: return
-        updateState {
-            it.copy(
-                bottomSheetType = exerciseDetails.copy(
-                    name = intent.name
-                )
-            )
-        }
+        workoutTrackManager.exerciseNameChange(intent.name)
     }
 
     private fun handleToggleRestTimerIntent(intent: WorkoutTrackerIntent.ToggleRestTimerIntent) {
@@ -272,6 +239,13 @@ class WorkoutTrackerViewModel(
                 }
                 val currentTime = System.currentTimeInMillis
                 val duration = currentTime - startedAt
+
+                // before saving cancel all the collection jobs since now we do not want any kinds of updates
+                workoutManagerJob?.cancel()
+                editableEntryJob?.cancel()
+
+                workoutTrackManager.resetEditableEntry()
+
                 saveWorkoutUseCase.invoke(
                     weekDay = weekDay,
                     dayName = screenState.workoutDayName.ifEmpty { defaultWorkoutDayName(weekDay, startedAt) },
@@ -309,20 +283,7 @@ class WorkoutTrackerViewModel(
     }
 
     private fun handleWorkoutWeightChangeIntent(intent: WorkoutTrackerIntent.WeightChangeIntent) {
-        val exerciseDetails = currentExerciseDetails() ?: return
-        updateState {
-            it.copy(
-                bottomSheetType = exerciseDetails.copy(
-                    sets = exerciseDetails.sets.map { set ->
-                        if (set.setId == intent.setId) {
-                            set.copy(additionalWeight = WeightInGrams.fromKg(intent.weightEntered))
-                        } else {
-                            set
-                        }
-                    }
-                )
-            )
-        }
+        workoutTrackManager.additionalWeightChange(intent.setId, intent.weightEntered)
     }
 
     private fun handleDismissDialogIntent() {
@@ -385,8 +346,7 @@ class WorkoutTrackerViewModel(
         }
 
         val exerciseNamesList = exercisesSelected.map { it.exerciseName }
-        workoutTrackManager.addExercises(exerciseNamesList)
-        startCollectingWorkoutTrackManager()
+        startCollectingFreshWorkoutInfo(exerciseNamesList)
         if (exerciseNamesList.isEmpty()) {
             processIntent(WorkoutTrackerIntent.AddExerciseIntent)
         }
@@ -411,31 +371,11 @@ class WorkoutTrackerViewModel(
     }
 
     private fun handleSubmitExerciseIntent() {
-        val exerciseDetails = currentExerciseDetails() ?: return
-
-        workoutTrackManager.addExercise(
-            exerciseId = exerciseDetails.exerciseId,
-            exerciseName = exerciseDetails.name,
-            sets = exerciseDetails.sets
-        )
-
-        updateState {
-            it.copy(
-                bottomSheetType = null
-            )
-        }
+        workoutTrackManager.submitEditableEntry()
     }
 
     private fun handleRemoveSetIntent(intent: WorkoutTrackerIntent.RemoveSetIntent) {
-        val exerciseDetails = currentExerciseDetails() ?: return
-
-        updateState {
-            it.copy(
-                bottomSheetType = exerciseDetails.copy(
-                    sets = exerciseDetails.sets.filter { it.setId != intent.setId }
-                )
-            )
-        }
+        workoutTrackManager.deleteSet(intent.setId)
     }
 
     private fun handleDeleteExerciseIntent(intent: WorkoutTrackerIntent.DeleteExerciseIntent) {
@@ -443,19 +383,7 @@ class WorkoutTrackerViewModel(
     }
 
     private fun handleEditExerciseIntent(intent: WorkoutTrackerIntent.EditExerciseIntent) {
-        val exerciseToEdit = workoutTrackManager.state.value.find {
-            it.exerciseId == intent.exerciseId
-        } ?: return // for edit, exercise should be present in tracker manager else return
-
-        updateState {
-            it.copy(
-                bottomSheetType = WorkoutTrackerBottomSheetType.ExerciseDetails(
-                    exerciseId = exerciseToEdit.exerciseId,
-                    name = exerciseToEdit.name,
-                    sets = exerciseToEdit.sets
-                )
-            )
-        }
+        startCollectingEditableEntryInfo(intent.exerciseId)
     }
 
     private fun handleCompleteBottomSheetPositiveClickedIntent(intent: WorkoutTrackerIntent.CompleteBottomSheetPositiveClickedIntent) {
@@ -480,16 +408,18 @@ class WorkoutTrackerViewModel(
         }
     }
 
-    private fun startCollectingWorkoutTrackManager() {
+    private fun startCollectingFreshWorkoutInfo(
+        exerciseNames: List<String>
+    ) {
         workoutManagerJob?.cancel()
         workoutManagerJob = viewModelScope.launch {
-            workoutTrackManager.state.collect { exerciseList ->
+            workoutTrackManager.initialiseWithExercises(exerciseNames).collect { info ->
                 updateState { currentState ->
                     val updatedScreenState = when(val screenState = currentState.screenState) {
                         is WorkoutTrackerScreenState.TrackerScreen -> {
                             screenState.copy(
-                                exercises = exerciseList,
-                                isExerciseAdditionAllowed = isExerciseAdditionAllowed(exerciseList)
+                                exercises = info.exercises,
+                                isExerciseAdditionAllowed = isExerciseAdditionAllowed(info.exercises)
                             )
                         }
                         is WorkoutTrackerScreenState.StartScreen,
@@ -499,8 +429,8 @@ class WorkoutTrackerViewModel(
                                 startTime = currentState.date ?: System.currentTimeInMillis
                             )
                             WorkoutTrackerScreenState.TrackerScreen(
-                                exercises = exerciseList,
-                                isExerciseAdditionAllowed = isExerciseAdditionAllowed(exerciseList),
+                                exercises = info.exercises,
+                                isExerciseAdditionAllowed = isExerciseAdditionAllowed(info.exercises),
                                 workoutDayName = defaultDayName,
                                 workoutDayNamePlaceholder = defaultDayName
                             )
