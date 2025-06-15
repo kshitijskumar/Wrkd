@@ -49,6 +49,8 @@ interface WorkoutTrackManager {
         weight: Double
     )
 
+    fun hasMadeAnyUpdates(): Boolean
+
 }
 
 data class WorkoutTrackInfo(

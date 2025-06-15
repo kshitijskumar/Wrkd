@@ -15,6 +15,7 @@ import org.example.project.wrkd.utils.System
 
 class WorkoutTrackerManagerImpl : WorkoutTrackManager {
 
+    private var initialDataStartedWith: WorkoutTrackInfo? = null
     private val _state = MutableStateFlow<WorkoutTrackManagerInternalState?>(null)
 
     override fun initialise(workoutId: String?): Flow<WorkoutTrackInfo> {
@@ -23,21 +24,12 @@ class WorkoutTrackerManagerImpl : WorkoutTrackManager {
             exercises = listOf(),
             editableEntry = null
         )
-        _state.update {
-            it?.copy(
-                dayName = defaultState.dayName,
-                exercises = defaultState.exercises
-            ) ?: defaultState
-        }
+        val finalState = _state.value?.copy(
+            dayName = defaultState.dayName,
+            exercises = defaultState.exercises
+        ) ?: defaultState
 
-        return _state
-            .filterNotNull()
-            .map {
-                WorkoutTrackInfo(
-                    dayName = it.dayName,
-                    exercises = it.exercises
-                )
-            }
+        return initialise(finalState)
     }
 
     override fun initialiseWithExercises(exercisesName: List<String>): Flow<WorkoutTrackInfo> {
@@ -55,10 +47,20 @@ class WorkoutTrackerManagerImpl : WorkoutTrackManager {
             exercises = stubExercisesEntries,
             editableEntry = null
         )
+        val finalState = _state.value?.copy(exercises = default.exercises) ?: default
+        return initialise(finalState)
+    }
+
+    private fun initialise(
+        finalState: WorkoutTrackManagerInternalState
+    ): Flow<WorkoutTrackInfo> {
         _state.update {
-            it?.copy(
-                exercises = default.exercises
-            ) ?: default
+            finalState.also {
+                initialDataStartedWith = WorkoutTrackInfo(
+                    dayName = finalState.dayName,
+                    exercises = finalState.exercises
+                )
+            }
         }
 
         return _state
@@ -70,8 +72,6 @@ class WorkoutTrackerManagerImpl : WorkoutTrackManager {
                 )
             }
     }
-
-
 
     override fun createEditableEntry(exerciseId: String?): Flow<WorkoutEditableEntry?> {
         _state.update {
@@ -212,6 +212,18 @@ class WorkoutTrackerManagerImpl : WorkoutTrackManager {
         }
     }
 
+    override fun hasMadeAnyUpdates(): Boolean {
+        // if no initial data/current state that means initialise havent been called
+        val initialData = initialDataStartedWith ?: return false
+        val currentState = _state.value ?: return false
+
+        val initialDayName = initialData.dayName
+        val initialExercises = initialData.exercises
+        val currentDayName = currentState.dayName
+        val currentExercises = currentState.exercises
+
+        return (initialDayName != currentDayName) || (initialExercises != currentExercises)
+    }
 }
 
 private data class WorkoutTrackManagerInternalState(

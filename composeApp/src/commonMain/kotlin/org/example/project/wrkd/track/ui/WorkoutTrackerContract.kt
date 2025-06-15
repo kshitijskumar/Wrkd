@@ -48,6 +48,8 @@ data class PreviousExerciseSelection(
 sealed class WorkoutTrackerDialogTypes {
     data object ConfirmationDialog : WorkoutTrackerDialogTypes()
     data object IncompleteWorkoutDetailsDialog : WorkoutTrackerDialogTypes()
+
+    data object BackClickedConfirmationDialog : WorkoutTrackerDialogTypes()
 }
 
 sealed class WorkoutTrackerIntent {
@@ -85,6 +87,8 @@ sealed class WorkoutTrackerIntent {
     data object DismissDialogIntent : WorkoutTrackerIntent()
 
     data object BackClickedIntent : WorkoutTrackerIntent()
+
+    data object BackClickedConfirmedIntent : WorkoutTrackerIntent()
 
     data object SubmitExerciseIntent : WorkoutTrackerIntent()
 

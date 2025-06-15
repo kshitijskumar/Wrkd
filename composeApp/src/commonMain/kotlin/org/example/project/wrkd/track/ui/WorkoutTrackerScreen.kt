@@ -839,6 +839,25 @@ fun WorkoutTrackerDialogHandling(
                 }
             )
         }
+        WorkoutTrackerDialogTypes.BackClickedConfirmationDialog -> {
+            ConfirmationDialog(
+                title = "Are you sure?",
+                message = """
+                    You will lose all the progress if you go back.
+                """.trimIndent(),
+                confirmText = "Yes",
+                cancelText = "Cancel",
+                onConfirm = {
+                    sendIntent.invoke(WorkoutTrackerIntent.BackClickedConfirmedIntent)
+                },
+                onCancel = {
+                    sendIntent.invoke(WorkoutTrackerIntent.DismissDialogIntent)
+                },
+                onDismissRequest = {
+                    sendIntent.invoke(WorkoutTrackerIntent.DismissDialogIntent)
+                }
+            )
+        }
     }
 }
 

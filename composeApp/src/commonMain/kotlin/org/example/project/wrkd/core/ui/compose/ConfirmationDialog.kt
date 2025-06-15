@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -76,9 +77,13 @@ fun ConfirmationDialog(
                         color = AppTheme.color.black87,
                         modifier = Modifier
                             .clickable(onClick = onCancel)
-                            .padding(vertical = AppTheme.dimens.medium1)
-                            .padding(end = AppTheme.dimens.medium2)
+                            .padding(
+                                horizontal = AppTheme.dimens.small2,
+                                vertical = AppTheme.dimens.medium1
+                            )
                     )
+
+                    Spacer(Modifier.width(AppTheme.dimens.small3))
                 }
 
                 Text(
@@ -88,7 +93,10 @@ fun ConfirmationDialog(
                     color = AppTheme.color.primaryDarkBlue,
                     modifier = Modifier
                         .clickable(onClick = onConfirm)
-                        .padding(vertical = AppTheme.dimens.medium1)
+                        .padding(
+                            horizontal = AppTheme.dimens.small2,
+                            vertical = AppTheme.dimens.medium1
+                        )
                 )
             }
         }

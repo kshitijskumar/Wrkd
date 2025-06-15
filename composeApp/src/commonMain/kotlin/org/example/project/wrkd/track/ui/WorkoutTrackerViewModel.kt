@@ -64,6 +64,7 @@ class WorkoutTrackerViewModel(
             is WorkoutTrackerIntent.CompleteBottomSheetPositiveClickedIntent -> handleCompleteBottomSheetPositiveClickedIntent(intent)
             is WorkoutTrackerIntent.CompleteWorkoutIntent -> handleCompleteWorkoutIntent(intent)
             WorkoutTrackerIntent.BackClickedIntent -> handleBackClickedIntent()
+            WorkoutTrackerIntent.BackClickedConfirmedIntent -> handleBackClickedConfirmedIntent()
         }
     }
 
@@ -73,7 +74,7 @@ class WorkoutTrackerViewModel(
 
         if (week == null) {
             // should not happen
-            appNavigator.goBack()
+            goBack()
             return
         }
 
@@ -362,12 +363,45 @@ class WorkoutTrackerViewModel(
             return
         }
         when(currentState.screenState) {
-            is WorkoutTrackerScreenState.TrackerScreen ->  {} //TODO()
+            is WorkoutTrackerScreenState.TrackerScreen ->  {
+                if (workoutTrackManager.hasMadeAnyUpdates()) {
+                    updateState {
+                        it.copy(
+                            dialogType = WorkoutTrackerDialogTypes.BackClickedConfirmationDialog
+                        )
+                    }
+                } else {
+                    // if not updates from initial data then go back directly
+                    goBack()
+                }
+            }
             is WorkoutTrackerScreenState.StartScreen,
             null -> {
-                appNavigator.goBack()
+                goBack()
             }
         }
+    }
+
+    private fun handleBackClickedConfirmedIntent() {
+        updateState {
+            it.copy(
+                dialogType = null
+            )
+        }
+        goBack()
+    }
+
+    private fun goBack() {
+        workoutManagerJob?.cancel()
+        editableEntryJob?.cancel()
+
+        updateState {
+            it.copy(
+                bottomSheetType = null,
+                dialogType = null
+            )
+        }
+        appNavigator.goBack()
     }
 
     private fun handleSubmitExerciseIntent() {
@@ -387,27 +421,13 @@ class WorkoutTrackerViewModel(
     }
 
     private fun handleCompleteBottomSheetPositiveClickedIntent(intent: WorkoutTrackerIntent.CompleteBottomSheetPositiveClickedIntent) {
-        appNavigator.navigate(
-            args = AppBaseScreenArgs,
-            navOptions = navOptions {
-                setPopUpTo(scene = AppScenes.AppBaseScreen, inclusive = true)
-            }
-        )
+        goBack()
         updateState {
             it.copy(
                 bottomSheetType = null
             )
         }
     }
-
-    private fun currentExerciseDetails(): WorkoutTrackerBottomSheetType.ExerciseDetails? {
-        return when(val bsType = currentState.bottomSheetType) {
-            is WorkoutTrackerBottomSheetType.ExerciseDetails -> bsType
-            is WorkoutTrackerBottomSheetType.WorkoutComplete,
-            null -> return null
-        }
-    }
-
     private fun startCollectingFreshWorkoutInfo(
         exerciseNames: List<String>
     ) {
