@@ -20,12 +20,10 @@ class WorkoutTrackerManagerImpl : WorkoutTrackManager {
 
     override fun initialise(workoutId: String?): Flow<WorkoutTrackInfo> {
         val defaultState = WorkoutTrackManagerInternalState(
-            dayName = "",
             exercises = listOf(),
             editableEntry = null
         )
         val finalState = _state.value?.copy(
-            dayName = defaultState.dayName,
             exercises = defaultState.exercises
         ) ?: defaultState
 
@@ -43,7 +41,6 @@ class WorkoutTrackerManagerImpl : WorkoutTrackManager {
         }
 
         val default = WorkoutTrackManagerInternalState(
-            dayName = "",
             exercises = stubExercisesEntries,
             editableEntry = null
         )
@@ -57,7 +54,6 @@ class WorkoutTrackerManagerImpl : WorkoutTrackManager {
         _state.update {
             finalState.also {
                 initialDataStartedWith = WorkoutTrackInfo(
-                    dayName = finalState.dayName,
                     exercises = finalState.exercises
                 )
             }
@@ -67,7 +63,6 @@ class WorkoutTrackerManagerImpl : WorkoutTrackManager {
             .filterNotNull()
             .map {
                 WorkoutTrackInfo(
-                    dayName = it.dayName,
                     exercises = it.exercises
                 )
             }
@@ -217,17 +212,14 @@ class WorkoutTrackerManagerImpl : WorkoutTrackManager {
         val initialData = initialDataStartedWith ?: return false
         val currentState = _state.value ?: return false
 
-        val initialDayName = initialData.dayName
         val initialExercises = initialData.exercises
-        val currentDayName = currentState.dayName
         val currentExercises = currentState.exercises
 
-        return (initialDayName != currentDayName) || (initialExercises != currentExercises)
+        return (initialExercises != currentExercises)
     }
 }
 
 private data class WorkoutTrackManagerInternalState(
-    val dayName: String,
     val exercises: List<ExercisePlanInfoAppModel>,
     val editableEntry: WorkoutEditableEntry?
 )

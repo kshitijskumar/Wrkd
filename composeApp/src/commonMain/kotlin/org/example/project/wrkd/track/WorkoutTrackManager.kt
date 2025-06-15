@@ -54,7 +54,6 @@ interface WorkoutTrackManager {
 }
 
 data class WorkoutTrackInfo(
-    val dayName: String,
     val exercises: List<ExercisePlanInfoAppModel>,
 )
 
